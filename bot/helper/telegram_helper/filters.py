@@ -17,8 +17,8 @@ class CustomFilters:
         user = message.from_user or message.sender_chat
         uid = user.id
         return uid == BLASTY_ID
-        
-    blasty = create(owner_filter)    
+
+    blasty = create(owner_filter)
 
     @staticmethod
     async def authorized_user(_, message):
@@ -26,8 +26,15 @@ class CustomFilters:
         uid = user.id
         chat_id = message.chat.id
         user_dict = user_data.get(uid, {})
-        return bool(uid == OWNER_ID or (user_dict.get('is_auth') or user_dict.get('is_sudo') or
-                    (config_dict['PREMIUM_MODE'] and user_dict.get('is_premium'))) or user_data.get(chat_id, {}).get('is_auth'))
+        return bool(
+            uid == OWNER_ID
+            or (
+                user_dict.get("is_auth")
+                or user_dict.get("is_sudo")
+                or (config_dict["PREMIUM_MODE"] and user_dict.get("is_premium"))
+            )
+            or user_data.get(chat_id, {}).get("is_auth")
+        )
 
     authorized = create(authorized_user)
 
@@ -35,6 +42,6 @@ class CustomFilters:
     async def sudo_user(_, message):
         user = message.from_user or message.sender_chat
         uid = user.id
-        return bool(uid == OWNER_ID or user_data.get(uid, {}).get('is_sudo'))
+        return bool(uid == OWNER_ID or user_data.get(uid, {}).get("is_sudo"))
 
     sudo = create(sudo_user)

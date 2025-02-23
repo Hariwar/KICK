@@ -22,7 +22,7 @@ class GoFileUploader:
         self._server = 2
         self._folderpathd = []
         self._is_dir = False
-        self._token = config_dict['GOFILETOKEN']
+        self._token = config_dict["GOFILETOKEN"]
         self.is_cancelled = False
         self.uploaded_bytes = 0
 
@@ -41,33 +41,61 @@ class GoFileUploader:
             bytestemp = 0
 
     async def _get_server(self):
-        async with ClientSession() as session, session.get('https://api.gofile.io/getServer', ssl=False) as r:
-            server = (await r.json())['data']['server']
-            server = int(server.split('e', maxsplit=1)[1])
+        async with (
+            ClientSession() as session,
+            session.get("https://api.gofile.io/getServer", ssl=False) as r,
+        ):
+            server = (await r.json())["data"]["server"]
+            server = int(server.split("e", maxsplit=1)[1])
             if server != 5:
                 self._server = server
-        LOGGER.info('GoFile running in server %s', self._server)
+        LOGGER.info("GoFile running in server %s", self._server)
 
     async def _verify(self):
-        async with ClientSession() as session, session.get(f'https://api.gofile.io/getAccountDetails?token={self._token}&allDetails=true', ssl=False) as resp:
-            if (await resp.json())['status'] == 'ok':
+        async with (
+            ClientSession() as session,
+            session.get(
+                f"https://api.gofile.io/getAccountDetails?token={self._token}&allDetails=true",
+                ssl=False,
+            ) as resp,
+        ):
+            if (await resp.json())["status"] == "ok":
                 return True
 
     async def _create_folder(self, foldername, parentfolderid):
-        LOGGER.info('Created Folder %s', foldername)
-        data = {'folderName': foldername, 'token': self._token, 'parentFolderId': parentfolderid}
-        async with ClientSession() as session, session.put('https://api.gofile.io/createFolder', data=data, ssl=False) as resp:
+        LOGGER.info("Created Folder %s", foldername)
+        data = {
+            "folderName": foldername,
+            "token": self._token,
+            "parentFolderId": parentfolderid,
+        }
+        async with (
+            ClientSession() as session,
+            session.put(
+                "https://api.gofile.io/createFolder", data=data, ssl=False
+            ) as resp,
+        ):
             res = await resp.json()
-            if res['status'] == 'ok':
-                return res['data']
+            if res["status"] == "ok":
+                return res["data"]
 
     def _upload_file(self, file, parentfolderid):
-        mpart = MultipartEncoder(fields={'file': (ospath.basename(file), open(file, 'rb'), guess_type(file)), 'token': self._token, 'folderId': parentfolderid})
+        mpart = MultipartEncoder(
+            fields={
+                "file": (ospath.basename(file), open(file, "rb"), guess_type(file)),
+                "token": self._token,
+                "folderId": parentfolderid,
+            }
+        )
         monitor = MultipartEncoderMonitor(mpart, self._callback)
-        resp = rpost(f'https://store{self._server}.gofile.io/uploadFile', data=monitor, headers={'Content-Type': monitor.content_type}).json()
+        resp = rpost(
+            f"https://store{self._server}.gofile.io/uploadFile",
+            data=monitor,
+            headers={"Content-Type": monitor.content_type},
+        ).json()
         self._temp_size = self.uploaded_bytes
-        if resp['status'] == 'ok':
-            return resp['data']['downloadPage']
+        if resp["status"] == "ok":
+            return resp["data"]["downloadPage"]
 
     async def _upload_folder(self, path, createdfolderid):
         self._folderpathd.append(createdfolderid)
@@ -75,7 +103,9 @@ class GoFileUploader:
         for file in files:
             file_path = ospath.join(path, file)
             if await aiopath.isfile(file_path):
-                dl_url = await sync_to_async(self._upload_file, file_path, self._folderpathd[-1])
+                dl_url = await sync_to_async(
+                    self._upload_file, file_path, self._folderpathd[-1]
+                )
                 if len(file) == 1 and not self._listener.isGofile:
                     self._listener.isGofile = dl_url
             elif await aiopath.isdir(file_path):
@@ -83,8 +113,8 @@ class GoFileUploader:
                 if not folder:
                     return
                 if not self._listener.isGofile:
-                    self._listener.isGofile = f'https://gofile.io/d/{folder["code"]}'
-                await self._upload_folder(file_path, folder['id'])
+                    self._listener.isGofile = f"https://gofile.io/d/{folder['code']}"
+                await self._upload_folder(file_path, folder["id"])
         del self._folderpathd[-1]
 
     async def goUpload(self):
@@ -94,11 +124,13 @@ class GoFileUploader:
         await self._get_server()
         file_path = ospath.join(self._listener.dir, self._listener.name)
         if await aiopath.isfile(file_path):
-            self._listener.isGofile = await sync_to_async(self._upload_file, file_path, config_dict['GOFILEBASEFOLDER'])
+            self._listener.isGofile = await sync_to_async(
+                self._upload_file, file_path, config_dict["GOFILEBASEFOLDER"]
+            )
             return
-        await self._upload_folder(file_path, config_dict['GOFILEBASEFOLDER'])
+        await self._upload_folder(file_path, config_dict["GOFILEBASEFOLDER"])
 
     async def cancel_task(self):
         self.is_cancelled = True
-        LOGGER.info('Cancelling Upload: %s', self._listener.name)
-        await self._listener.onUploadError('Upload stopped by user!')
+        LOGGER.info("Cancelling Upload: %s", self._listener.name)
+        await self._listener.onUploadError("Upload stopped by user!")

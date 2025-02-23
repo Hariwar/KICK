@@ -1,6 +1,10 @@
 from time import time
 
-from bot.helper.ext_utils.status_utils import MirrorStatus, get_readable_file_size, get_readable_time
+from bot.helper.ext_utils.status_utils import (
+    MirrorStatus,
+    get_readable_file_size,
+    get_readable_time,
+)
 
 
 class TelegramStatus:
@@ -14,7 +18,7 @@ class TelegramStatus:
 
     @staticmethod
     def engine():
-        return 'Pyrofork'
+        return "Pyrofork"
 
     def elapsed(self):
         return get_readable_time(time() - self._elapsed)
@@ -26,7 +30,11 @@ class TelegramStatus:
         return get_readable_file_size(self._size)
 
     def status(self):
-        return MirrorStatus.STATUS_DOWNLOADING if self._status == 'dl' else MirrorStatus.STATUS_UPLOADING
+        return (
+            MirrorStatus.STATUS_DOWNLOADING
+            if self._status == "dl"
+            else MirrorStatus.STATUS_UPLOADING
+        )
 
     def name(self):
         return self.listener.name
@@ -36,16 +44,18 @@ class TelegramStatus:
             progress_raw = self._obj.processed_bytes / self._size * 100
         except:
             progress_raw = 0
-        return f'{round(progress_raw, 2)}%'
+        return f"{round(progress_raw, 2)}%"
 
     def speed(self):
-        return f'{get_readable_file_size(self._obj.speed)}/s'
+        return f"{get_readable_file_size(self._obj.speed)}/s"
 
     def eta(self):
         try:
-            return get_readable_time((self._size - self._obj.processed_bytes) / self._obj.speed)
+            return get_readable_time(
+                (self._size - self._obj.processed_bytes) / self._obj.speed
+            )
         except:
-            return '~'
+            return "~"
 
     def gid(self):
         return self._gid

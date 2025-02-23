@@ -19,11 +19,11 @@ async def authorize(_, message: Message):
         id_ = reply_to.from_user.id if reply_to.from_user else reply_to.sender_chat.id
     else:
         id_ = message.chat.id
-    if id_ in user_data and user_data.get(id_, {}).get('is_auth'):
-        msg = 'Already Authorized!'
+    if id_ in user_data and user_data.get(id_, {}).get("is_auth"):
+        msg = "Already Authorized!"
     else:
-        await update_user_ldata(id_, 'is_auth', True)
-        msg = 'Authorized Successfully'
+        await update_user_ldata(id_, "is_auth", True)
+        msg = "Authorized Successfully"
     msg = await sendMessage(msg, message)
     await auto_delete_message(message, msg)
 
@@ -37,18 +37,18 @@ async def unauthorize(_, message: Message):
         id_ = reply_to.from_user.id if reply_to.from_user else reply_to.sender_chat.id
     else:
         id_ = message.chat.id
-    if id_ not in user_data or user_data.get(id_, {}).get('is_auth'):
-        await update_user_ldata(id_, 'is_auth', False)
-        msg = 'Unauthorized Successfully'
+    if id_ not in user_data or user_data.get(id_, {}).get("is_auth"):
+        await update_user_ldata(id_, "is_auth", False)
+        msg = "Unauthorized Successfully"
     else:
-        msg = 'Already Unauthorized!'
+        msg = "Already Unauthorized!"
     msg = await sendMessage(msg, message)
     await auto_delete_message(message, msg)
 
 
 @new_task
 async def addSudo(_, message: Message):
-    id_ = day = ''
+    id_ = day = ""
     msg = message.text.split()
     if len(msg) > 1:
         id_ = int(msg[1].strip())
@@ -60,40 +60,59 @@ async def addSudo(_, message: Message):
             day = int(msg[1])
     if id_:
         if day:
-            await update_user_ldata(id_, 'sudo_left', int(time() + (86400 * int(msg[2]))))
-        if user_data.get(id_, {}).get('is_sudo'):
-            msg = 'Already Sudo!'
+            await update_user_ldata(
+                id_, "sudo_left", int(time() + (86400 * int(msg[2])))
+            )
+        if user_data.get(id_, {}).get("is_sudo"):
+            msg = "Already Sudo!"
         else:
-            await update_user_ldata(id_, 'is_sudo', True)
-            msg = 'Promoted as Sudo'
+            await update_user_ldata(id_, "is_sudo", True)
+            msg = "Promoted as Sudo"
     else:
-        msg = 'Give ID or Reply To message of whom you want to Promote'
+        msg = "Give ID or Reply To message of whom you want to Promote"
     msg = await sendMessage(msg, message)
     await auto_delete_message(message, msg)
 
 
 @new_task
 async def removeSudo(_, message: Message):
-    id_ = ''
+    id_ = ""
     msg = message.text.split()
     if len(msg) > 1:
         id_ = int(msg[1].strip())
     elif reply_to := message.reply_to_message:
         id_ = reply_to.from_user.id if reply_to.from_user else reply_to.sender_chat.id
     if id_:
-        if user_data.get(id_, {}).get('is_sudo'):
-            user_data[id_].pop('sudo_left', None)
-            await update_user_ldata(id_, 'is_sudo', False)
-            msg = 'Demoted Bae!'
+        if user_data.get(id_, {}).get("is_sudo"):
+            user_data[id_].pop("sudo_left", None)
+            await update_user_ldata(id_, "is_sudo", False)
+            msg = "Demoted Bae!"
         else:
-            msg = 'Currently not sudo Bae!'
+            msg = "Currently not sudo Bae!"
     else:
-        msg = 'Give ID or Reply To message of whom you want to remove from Sudo Bae.'
+        msg = "Give ID or Reply To message of whom you want to remove from Sudo Bae."
     msg = await sendMessage(msg, message)
     await auto_delete_message(message, msg)
 
 
-bot.add_handler(MessageHandler(authorize, filters=command(BotCommands.AuthorizeCommand) & CustomFilters.sudo))
-bot.add_handler(MessageHandler(unauthorize, filters=command(BotCommands.UnAuthorizeCommand) & CustomFilters.sudo))
-bot.add_handler(MessageHandler(addSudo, filters=command(BotCommands.AddSudoCommand) & CustomFilters.owner))
-bot.add_handler(MessageHandler(removeSudo, filters=command(BotCommands.RmSudoCommand) & CustomFilters.owner))
+bot.add_handler(
+    MessageHandler(
+        authorize, filters=command(BotCommands.AuthorizeCommand) & CustomFilters.sudo
+    )
+)
+bot.add_handler(
+    MessageHandler(
+        unauthorize,
+        filters=command(BotCommands.UnAuthorizeCommand) & CustomFilters.sudo,
+    )
+)
+bot.add_handler(
+    MessageHandler(
+        addSudo, filters=command(BotCommands.AddSudoCommand) & CustomFilters.owner
+    )
+)
+bot.add_handler(
+    MessageHandler(
+        removeSudo, filters=command(BotCommands.RmSudoCommand) & CustomFilters.owner
+    )
+)

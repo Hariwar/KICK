@@ -1,6 +1,10 @@
 from time import time
 
-from bot.helper.ext_utils.status_utils import MirrorStatus, get_readable_file_size, get_readable_time
+from bot.helper.ext_utils.status_utils import (
+    MirrorStatus,
+    get_readable_file_size,
+    get_readable_time,
+)
 
 
 class GdriveStatus:
@@ -14,7 +18,7 @@ class GdriveStatus:
 
     @staticmethod
     def engine():
-        return 'Google API'
+        return "Google API"
 
     def elapsed(self):
         return get_readable_time(time() - self._elapsed)
@@ -26,9 +30,9 @@ class GdriveStatus:
         return get_readable_file_size(self._size)
 
     def status(self):
-        if self._status == 'up':
+        if self._status == "up":
             return MirrorStatus.STATUS_UPLOADING
-        if self._status == 'dl':
+        if self._status == "dl":
             return MirrorStatus.STATUS_DOWNLOADING
         return MirrorStatus.STATUS_CLONING
 
@@ -45,16 +49,18 @@ class GdriveStatus:
             return 0
 
     def progress(self):
-        return f'{round(self.progress_raw(), 2)}%'
+        return f"{round(self.progress_raw(), 2)}%"
 
     def speed(self):
-        return f'{get_readable_file_size(self._obj.speed)}/s'
+        return f"{get_readable_file_size(self._obj.speed)}/s"
 
     def eta(self):
         try:
-            return get_readable_time((self._size - self._obj.processed_bytes) / self._obj.speed)
+            return get_readable_time(
+                (self._size - self._obj.processed_bytes) / self._obj.speed
+            )
         except:
-            return '~'
+            return "~"
 
     def task(self):
         return self._obj

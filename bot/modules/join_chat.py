@@ -12,26 +12,34 @@ from bot.helper.telegram_helper.message_utils import sendMessage, auto_delete_me
 
 async def join_chat(_, message: Message):
     async with bot_lock:
-        savebot = bot_dict['SAVEBOT']
+        savebot = bot_dict["SAVEBOT"]
     if savebot:
         link = get_link(message)
         if not link:
-            msg = await sendMessage('Please provided a chat join link!', message)
+            msg = await sendMessage("Please provided a chat join link!", message)
             return
         try:
             await savebot.join_chat(link)
-            text = 'Suscessfully joined to chat.'
+            text = "Suscessfully joined to chat."
         except UserAlreadyParticipant:
-            text = 'Already joined to chat.'
+            text = "Already joined to chat."
         except InviteHashExpired:
-            text = 'Invite link expired!'
+            text = "Invite link expired!"
         except Exception as e:
             LOGGER.error(e)
-            text = 'Invalid link!'
+            text = "Invalid link!"
         msg = await sendMessage(text, message)
     else:
-        msg = await sendMessage(f'Default save content mode is disabled! Use custom string instead /{BotCommands.UserSetCommand}.', message)
+        msg = await sendMessage(
+            f"Default save content mode is disabled! Use custom string instead /{BotCommands.UserSetCommand}.",
+            message,
+        )
     await auto_delete_message(message, msg, message.reply_to_message)
 
 
-bot.add_handler(MessageHandler(join_chat, filters=command(BotCommands.JoinChatCommand) & CustomFilters.authorized))
+bot.add_handler(
+    MessageHandler(
+        join_chat,
+        filters=command(BotCommands.JoinChatCommand) & CustomFilters.authorized,
+    )
+)

@@ -10,7 +10,7 @@ def get_download(gid, old_info=None):
     try:
         return aria2.get_download(gid)
     except Exception as e:
-        LOGGER.error('%s: Aria2c, Error while getting torrent info', e)
+        LOGGER.error("%s: Aria2c, Error while getting torrent info", e)
         return old_info
 
 
@@ -26,7 +26,7 @@ class Aria2Status:
 
     @staticmethod
     def engine():
-        return 'Aria2'
+        return "Aria2"
 
     def elapsed(self):
         return get_readable_time(time() - self._elapsed)
@@ -62,7 +62,11 @@ class Aria2Status:
     def status(self):
         self._update()
         if self._download.is_waiting or self.queued:
-            return MirrorStatus.STATUS_QUEUEUP if self.seeding else MirrorStatus.STATUS_QUEUEDL
+            return (
+                MirrorStatus.STATUS_QUEUEUP
+                if self.seeding
+                else MirrorStatus.STATUS_QUEUEDL
+            )
         if self._download.is_paused:
             return MirrorStatus.STATUS_PAUSED
         if self._download.seeder and self.seeding:
@@ -83,7 +87,7 @@ class Aria2Status:
         return self._download.upload_speed_string()
 
     def ratio(self):
-        return f'{round(self._download.upload_length / self._download.completed_length, 3)}'
+        return f"{round(self._download.upload_length / self._download.completed_length, 3)}"
 
     def seeding_time(self):
         return get_readable_time(time() - self.start_time)
@@ -97,19 +101,26 @@ class Aria2Status:
 
     async def cancel_task(self):
         if self._download.seeder and self.seeding:
-            LOGGER.info('Cancelling Seed: %s', self.name())
-            await gather(self.listener.onUploadError(f'Seeding stopped with Ratio: {self.ratio()} and Time: {self.seeding_time()}'),
-                         sync_to_async(aria2.remove, [self._download], force=True, files=True))
+            LOGGER.info("Cancelling Seed: %s", self.name())
+            await gather(
+                self.listener.onUploadError(
+                    f"Seeding stopped with Ratio: {self.ratio()} and Time: {self.seeding_time()}"
+                ),
+                sync_to_async(aria2.remove, [self._download], force=True, files=True),
+            )
         elif downloads := self._download.followed_by:
-            LOGGER.info('Cancelling Download: %s')
-            await self.listener.onDownloadError('Download cancelled by user!')
+            LOGGER.info("Cancelling Download: %s")
+            await self.listener.onDownloadError("Download cancelled by user!")
             downloads.append(self._download)
             await sync_to_async(aria2.remove, downloads, force=True, files=True)
         else:
             if self.queued:
-                LOGGER.info('Cancelling QueueDl: %s', self.name())
-                msg = 'Task have been removed from queue/download'
+                LOGGER.info("Cancelling QueueDl: %s", self.name())
+                msg = "Task have been removed from queue/download"
             else:
-                LOGGER.info('Cancelling Download: %s', self.name())
-                msg = 'Download stopped by user!'
-            await gather(self.listener.onDownloadError(msg), sync_to_async(aria2.remove, [self._download], force=True, files=True))
+                LOGGER.info("Cancelling Download: %s", self.name())
+                msg = "Download stopped by user!"
+            await gather(
+                self.listener.onDownloadError(msg),
+                sync_to_async(aria2.remove, [self._download], force=True, files=True),
+            )

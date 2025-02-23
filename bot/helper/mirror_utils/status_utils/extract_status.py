@@ -3,7 +3,11 @@ from time import time
 from bot import subprocess_lock, LOGGER
 from bot.helper.ext_utils.bot_utils import async_to_sync
 from bot.helper.ext_utils.files_utils import get_path_size
-from bot.helper.ext_utils.status_utils import get_readable_file_size, MirrorStatus, get_readable_time
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    MirrorStatus,
+    get_readable_time,
+)
 
 
 class ExtractStatus:
@@ -15,7 +19,7 @@ class ExtractStatus:
 
     @staticmethod
     def engine():
-        return 'p7zip'
+        return "p7zip"
 
     def elapsed(self):
         return get_readable_time(time() - self._start_time)
@@ -33,10 +37,10 @@ class ExtractStatus:
             return 0
 
     def progress(self):
-        return f'{round(self.progress_raw(), 2)}%'
+        return f"{round(self.progress_raw(), 2)}%"
 
     def speed(self):
-        return f'{get_readable_file_size(self.speed_raw())}/s'
+        return f"{get_readable_file_size(self.speed_raw())}/s"
 
     def name(self):
         return self.listener.name
@@ -46,9 +50,11 @@ class ExtractStatus:
 
     def eta(self):
         try:
-            return get_readable_time((self._size - self.processed_raw()) / self.speed_raw())
+            return get_readable_time(
+                (self._size - self.processed_raw()) / self.speed_raw()
+            )
         except:
-            return '~'
+            return "~"
 
     @staticmethod
     def status():
@@ -58,17 +64,20 @@ class ExtractStatus:
         return get_readable_file_size(self.processed_raw())
 
     def processed_raw(self):
-        return (async_to_sync(get_path_size, self.listener.newDir) if self.listener.newDir
-                else async_to_sync(get_path_size, self.listener.dir) - self._size)
+        return (
+            async_to_sync(get_path_size, self.listener.newDir)
+            if self.listener.newDir
+            else async_to_sync(get_path_size, self.listener.dir) - self._size
+        )
 
     def task(self):
         return self
 
     async def cancel_task(self):
-        LOGGER.info('Cancelling Extract: %s', self.name())
+        LOGGER.info("Cancelling Extract: %s", self.name())
         async with subprocess_lock:
             if self.listener.suproc and self.listener.suproc.returncode is None:
                 self.listener.suproc.kill()
             else:
-                self.listener.suproc = 'cancelled'
-        await self.listener.onUploadError('Extracting stopped by user!')
+                self.listener.suproc = "cancelled"
+        await self.listener.onUploadError("Extracting stopped by user!")

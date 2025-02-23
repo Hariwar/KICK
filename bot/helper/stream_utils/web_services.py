@@ -14,9 +14,14 @@ server = web.AppRunner(web_server())
 
 
 async def start_server():
-    if config_dict['ENABLE_STREAM_LINK'] and config_dict['STREAM_BASE_URL'] and config_dict['STREAM_PORT'] and config_dict['LEECH_LOG']:
-        port = config_dict['STREAM_PORT']
+    if (
+        config_dict["ENABLE_STREAM_LINK"]
+        and config_dict["STREAM_BASE_URL"]
+        and config_dict["STREAM_PORT"]
+        and config_dict["LEECH_LOG"]
+    ):
+        port = config_dict["STREAM_PORT"]
         await server.cleanup()
-        LOGGER.info('Initalizing web stream with %s', port)
+        LOGGER.info("Initalizing web stream with %s", port)
         await server.setup()
-        await web.TCPSite(server, '0.0.0.0', 40065).start()
+        await web.TCPSite(server, "0.0.0.0", 40065).start()

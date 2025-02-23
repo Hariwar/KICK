@@ -13,7 +13,7 @@ class RcloneStatus:
 
     @staticmethod
     def engine():
-        return 'RClone'
+        return "RClone"
 
     def elapsed(self):
         return get_readable_time(time() - self._elapsed)
@@ -38,9 +38,9 @@ class RcloneStatus:
 
     def status(self):
         match self._status:
-            case 'dl':
+            case "dl":
                 return MirrorStatus.STATUS_DOWNLOADING
-            case 'up':
+            case "up":
                 return MirrorStatus.STATUS_UPLOADING
             case _:
                 return MirrorStatus.STATUS_CLONING

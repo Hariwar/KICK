@@ -7,7 +7,9 @@ from bot.helper.listeners import tasks_listener as task
 
 
 class DirectListener:
-    def __init__(self, listener: task.TaskListener, total_size: int, path: str, a2c_opt: str):
+    def __init__(
+        self, listener: task.TaskListener, total_size: int, path: str, a2c_opt: str
+    ):
         self._path = path
         self._listener = listener
         self._is_cancelled = False
@@ -33,17 +35,17 @@ class DirectListener:
         for content in contents:
             if self._is_cancelled:
                 break
-            if content['path']:
-                self._a2c_opt['dir'] = f'{self._path}/{content["path"]}'
+            if content["path"]:
+                self._a2c_opt["dir"] = f"{self._path}/{content['path']}"
             else:
-                self._a2c_opt['dir'] = self._path
-            filename = content['filename']
-            self._a2c_opt['out'] = filename
+                self._a2c_opt["dir"] = self._path
+            filename = content["filename"]
+            self._a2c_opt["out"] = filename
             try:
-                self.task = aria2.add_uris([content['url']], self._a2c_opt, position=0)
+                self.task = aria2.add_uris([content["url"]], self._a2c_opt, position=0)
             except Exception as e:
                 self._failed += 1
-                LOGGER.error('Unable to download %s due to: %s', filename, e)
+                LOGGER.error("Unable to download %s due to: %s", filename, e)
                 continue
             self.task = self.task.live
             while True:
@@ -54,7 +56,11 @@ class DirectListener:
                 self.task = self.task.live
                 if error_message := self.task.error_message:
                     self._failed += 1
-                    LOGGER.error('Unable to download %s due to: %s', self.task.name, error_message)
+                    LOGGER.error(
+                        "Unable to download %s due to: %s",
+                        self.task.name,
+                        error_message,
+                    )
                     self.task.remove(True, True)
                     break
                 if self.task.is_complete:
@@ -66,13 +72,15 @@ class DirectListener:
         if self._is_cancelled:
             return
         if self._failed == len(contents):
-            async_to_sync(self._listener.onDownloadError, 'All files are failed to download!')
+            async_to_sync(
+                self._listener.onDownloadError, "All files are failed to download!"
+            )
             return
         async_to_sync(self._listener.onDownloadComplete)
 
     async def cancel_task(self):
         self._is_cancelled = True
-        LOGGER.info('Cancelling Download: %s', self._listener.name)
-        await self._listener.onDownloadError('Download cancelled by user!')
+        LOGGER.info("Cancelling Download: %s", self._listener.name)
+        await self._listener.onDownloadError("Download cancelled by user!")
         if self.task:
             await sync_to_async(self.task.remove, force=True, files=True)

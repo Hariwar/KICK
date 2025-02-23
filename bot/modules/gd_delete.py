@@ -16,11 +16,20 @@ async def deletefile(_, message: Message):
     link = get_link(message)
     if is_gdrive_link(link):
         LOGGER.info(link)
-        msg = await sync_to_async(gdDelete().deletefile, link, message.from_user.id if message.from_user else message.sender_chat.id)
+        msg = await sync_to_async(
+            gdDelete().deletefile,
+            link,
+            message.from_user.id if message.from_user else message.sender_chat.id,
+        )
     else:
-        msg = 'Send <b>GDrive</b> link along with command or by replying to the link by command'
+        msg = "Send <b>GDrive</b> link along with command or by replying to the link by command"
     msg = await sendMessage(msg, message)
     await auto_delete_message(message, msg, message.reply_to_message)
 
 
-bot.add_handler(MessageHandler(deletefile, filters=command(BotCommands.DeleteCommand) & CustomFilters.authorized))
+bot.add_handler(
+    MessageHandler(
+        deletefile,
+        filters=command(BotCommands.DeleteCommand) & CustomFilters.authorized,
+    )
+)

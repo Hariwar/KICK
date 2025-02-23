@@ -14,26 +14,36 @@ from bot.helper.telegram_helper.message_utils import sendFile, sendMessage
 async def shell(_, message: Message):
     cmd = message.text.split(maxsplit=1)
     if len(cmd) == 1:
-        await sendMessage('No command given to execute!', message)
+        await sendMessage("No command given to execute!", message)
         return
     cmd = cmd[1].strip()
     stdout, stderr, _ = await cmd_exec(cmd, shell=True)
-    text = ''
+    text = ""
     if len(stdout) != 0:
-        text += f'<b>Stdout</b>\n{stdout}\n'
-        LOGGER.info('Shell - %s - %s', cmd, stdout)
+        text += f"<b>Stdout</b>\n{stdout}\n"
+        LOGGER.info("Shell - %s - %s", cmd, stdout)
     if len(stderr) != 0:
-        text += f'<b>Stderr</b>\n{stderr}\n'
-        LOGGER.error('Shell - %s - %s', cmd, stderr)
+        text += f"<b>Stderr</b>\n{stderr}\n"
+        LOGGER.error("Shell - %s - %s", cmd, stderr)
     if len(text) > 4000:
-        async with aiopen('shell_output.txt', 'w') as f:
+        async with aiopen("shell_output.txt", "w") as f:
             await f.write(text)
-        await sendFile(message, 'shell_output.txt', 'shell_output', config_dict['IMAGE_TXT'])
+        await sendFile(
+            message, "shell_output.txt", "shell_output", config_dict["IMAGE_TXT"]
+        )
     elif len(text) != 0:
         await sendMessage(text, message)
     else:
-        await sendMessage('No output.', message)
+        await sendMessage("No output.", message)
 
 
-bot.add_handler(MessageHandler(shell, filters=command(BotCommands.ShellCommand) & CustomFilters.blasty))
-bot.add_handler(EditedMessageHandler(shell, filters=command(BotCommands.ShellCommand) & CustomFilters.blasty))
+bot.add_handler(
+    MessageHandler(
+        shell, filters=command(BotCommands.ShellCommand) & CustomFilters.blasty
+    )
+)
+bot.add_handler(
+    EditedMessageHandler(
+        shell, filters=command(BotCommands.ShellCommand) & CustomFilters.blasty
+    )
+)

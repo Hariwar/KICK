@@ -17,7 +17,7 @@ class TeleContent:
         self._start = 0
         self._direct = direct
         self._content = {}
-        self._cap = ''
+        self._cap = ""
         self._count = 0
         self._page_no = 1
         self._pages = ceil(len(self._content) / self._max)
@@ -34,7 +34,6 @@ class TeleContent:
 
     def _clenup(self):
         content_dict.pop(self._message.id, None)
-
 
     async def _auto_clean(self):
         if len(self._content) <= self._max or not self._direct:
@@ -61,23 +60,23 @@ class TeleContent:
 
     def _prepare_data(self, data, fdata):
         match data:
-            case 'nex':
+            case "nex":
                 if self._page_no == self._pages:
                     self._count = 0
                     self._page_no = 1
                 else:
                     self._count += self._max
                     self._page_no += 1
-            case 'pre':
+            case "pre":
                 if self._page_no == 1:
                     self._count = self._max * (self._pages - 1)
                     self._page_no = self._pages
                 else:
                     self._count -= self._max
                     self._page_no -= 1
-            case 'foot':
+            case "foot":
                 if fdata in (self._start, self._count):
-                    return f'Already in page {self._page_no}!'
+                    return f"Already in page {self._page_no}!"
                 self._start = fdata
                 self._count = self._start
                 if self._start / self._max == 0:
@@ -94,23 +93,29 @@ class TeleContent:
             return pre, None
         buttons = ButtonMaker()
         if not self._content:
-            return '', None
-        text, mid, user_id = '', self._message.id, self._message.from_user.id
+            return "", None
+        text, mid, user_id = "", self._message.id, self._message.from_user.id
         task = len(self._content)
-        for index, r_data in enumerate(self._content[self._count:], start=1):
+        for index, r_data in enumerate(self._content[self._count :], start=1):
             text += r_data
             if index == self._max:
                 break
         if task > self._max:
-            buttons.button_data('<<', f'{pattern} {user_id} pre {mid}')
-            buttons.button_data(f'{self._page_no}/{self._pages}', f'{pattern} {user_id} page {mid}')
-            buttons.button_data('>>', f'{pattern} {user_id} nex {mid}')
-        buttons.button_data('Close', f'{pattern} {user_id} close {mid}')
+            buttons.button_data("<<", f"{pattern} {user_id} pre {mid}")
+            buttons.button_data(
+                f"{self._page_no}/{self._pages}", f"{pattern} {user_id} page {mid}"
+            )
+            buttons.button_data(">>", f"{pattern} {user_id} nex {mid}")
+        buttons.button_data("Close", f"{pattern} {user_id} close {mid}")
         if extra_buttons:
             for key, value in extra_buttons:
-                buttons.button_data(key, f'{pattern} {value}', 'header')
+                buttons.button_data(key, f"{pattern} {value}", "header")
         if self._pages >= 5:
             for x in range(0, task, self._max):
-                buttons.button_data(int(x/self._max) + 1, f'{pattern} {user_id} foot {mid} {x}', position='footer')
-        text += f'▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n{self._cap}'
+                buttons.button_data(
+                    int(x / self._max) + 1,
+                    f"{pattern} {user_id} foot {mid} {x}",
+                    position="footer",
+                )
+        text += f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n{self._cap}"
         return text, buttons.build_menu(3)

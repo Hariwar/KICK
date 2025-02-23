@@ -7,30 +7,33 @@ from bot import LOGGER
 
 
 next_page = False
-next_page_token = ''
+next_page_token = ""
 
 
 async def func(payload_input, url: str, username: str, password: str):
     global next_page, next_page_token
-    if not url.endswith('/'):
-        url += '/'
+    if not url.endswith("/"):
+        url += "/"
     try:
-        user_pass = f'{username}:{password}'
-        headers = {'authorization': f'Basic {b64encode(user_pass.encode()).decode()}'}
+        user_pass = f"{username}:{password}"
+        headers = {"authorization": f"Basic {b64encode(user_pass.encode()).decode()}"}
     except:
-        return 'Username/password combination is wrong or invalid link!'
+        return "Username/password combination is wrong or invalid link!"
     try:
-        async with ClientSession() as session, session.post(url, data=payload_input, headers=headers, ssl=False) as r:
+        async with (
+            ClientSession() as session,
+            session.post(url, data=payload_input, headers=headers, ssl=False) as r,
+        ):
             if r.status == 401:
-                return 'Username/password combination is wrong or invalid link!'
+                return "Username/password combination is wrong or invalid link!"
             try:
-                json_data = b64decode((await r.read())[::-1][24:-20]).decode('utf-8')
+                json_data = b64decode((await r.read())[::-1][24:-20]).decode("utf-8")
                 decrypted_response = jsonloads(json_data)
             except:
-                return 'Something went wrong or invalid link! Check index link/username/password and try again.'
+                return "Something went wrong or invalid link! Check index link/username/password and try again."
     except:
-        return 'Something wrong or invalid link!'
-    page_token = decrypted_response.get('nextPageToken')
+        return "Something wrong or invalid link!"
+    page_token = decrypted_response.get("nextPageToken")
     if page_token is None:
         next_page = False
     else:
@@ -38,13 +41,13 @@ async def func(payload_input, url: str, username: str, password: str):
         next_page_token = page_token
     result = []
     try:
-        if list(decrypted_response.get('data').keys())[0] == 'error':
-            raise ValueError('Gor error respons!')
-        file_length = len(decrypted_response['data']['files'])
+        if list(decrypted_response.get("data").keys())[0] == "error":
+            raise ValueError("Gor error respons!")
+        file_length = len(decrypted_response["data"]["files"])
         for i, _ in enumerate(range(file_length)):
-            files_type = decrypted_response['data']['files'][i]['mimeType']
-            files_name = decrypted_response['data']['files'][i]['name']
-            if files_type != 'application/vnd.google-apps.folder':
+            files_type = decrypted_response["data"]["files"][i]["mimeType"]
+            files_name = decrypted_response["data"]["files"][i]["name"]
+            if files_type != "application/vnd.google-apps.folder":
                 direct_download_link = url + quote(files_name)
                 result.append(direct_download_link)
     except Exception as e:
@@ -54,15 +57,15 @@ async def func(payload_input, url: str, username: str, password: str):
 
 async def index_scrapper(url, username, password):
     x = 0
-    payload = {'page_token': next_page_token, 'page_index': x}
+    payload = {"page_token": next_page_token, "page_index": x}
     res = await func(payload, url, username, password)
     results = []
-    if 'wrong' not in res:
+    if "wrong" not in res:
         results.extend(res)
     while next_page is True:
-        payload = {'page_token': next_page_token, 'page_index': x}
+        payload = {"page_token": next_page_token, "page_index": x}
         res = await func(payload, url, username, password)
-        if 'wrong' not in res:
+        if "wrong" not in res:
             results.extend(res)
         x += 1
-    return res if 'wrong' in res else results
+    return res if "wrong" in res else results

@@ -15,8 +15,8 @@ class TgLinkException(Exception):
 
 
 class InvalidHash(Exception):
-    message = 'Invalid hash!'
+    message = "Invalid hash!"
 
 
 class FIleNotFound(Exception):
-    message = 'File not found!'
+    message = "File not found!"

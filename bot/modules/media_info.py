@@ -10,28 +10,54 @@ from bot.helper.stream_utils.file_properties import gen_link
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
-from bot.helper.telegram_helper.message_utils import sendMessage, sendPhoto, editPhoto, copyMessage, deleteMessage
+from bot.helper.telegram_helper.message_utils import (
+    sendMessage,
+    sendPhoto,
+    editPhoto,
+    copyMessage,
+    deleteMessage,
+)
 from bot.helper.video_utils.executor import get_metavideo
+
+
 @new_task
 async def medinfo(_, message: Message):
     link, media, cmsg = get_link(message), None, None
-    if (reply_to := message.reply_to_message) and (media := is_media(reply_to)) and (chat_id := config_dict['LEECH_LOG']):
+    if (
+        (reply_to := message.reply_to_message)
+        and (media := is_media(reply_to))
+        and (chat_id := config_dict["LEECH_LOG"])
+    ):
         cmsg = await copyMessage(chat_id, reply_to)
         link = (await gen_link(cmsg or reply_to))[1]
     if link and is_url(link):
-        img = config_dict['IMAGE_MEDINFO']
-        msg = await sendPhoto('<i>Processing, please wait...</i>', message, img)
-        if (size := int((await get_metavideo(link))[1].get('size', 0))) and (result := await post_media_info(link, size, is_link=True)):
+        img = config_dict["IMAGE_MEDINFO"]
+        msg = await sendPhoto("<i>Processing, please wait...</i>", message, img)
+        if (size := int((await get_metavideo(link))[1].get("size", 0))) and (
+            result := await post_media_info(link, size, is_link=True)
+        ):
             buttons = ButtonMaker()
-            buttons.button_link('Media Info', result)
+            buttons.button_link("Media Info", result)
             if not media:
-                buttons.button_link('Source', link)
-            await editPhoto(f'<b>MEDIA INFO RESULT</b>\n<code>{get_url_name(link)}</code>\n<b>Size:</b> {get_readable_file_size(size)}',
-                            msg, img, buttons.build_menu(1))
+                buttons.button_link("Source", link)
+            await editPhoto(
+                f"<b>MEDIA INFO RESULT</b>\n<code>{get_url_name(link)}</code>\n<b>Size:</b> {get_readable_file_size(size)}",
+                msg,
+                img,
+                buttons.build_menu(1),
+            )
         else:
-            await editPhoto('Error when getting info!', msg, img)
+            await editPhoto("Error when getting info!", msg, img)
     else:
-        await sendMessage('Send command along with link or by reply to the link/media!', message)
+        await sendMessage(
+            "Send command along with link or by reply to the link/media!", message
+        )
     if cmsg:
         await deleteMessage(cmsg)
-bot.add_handler(MessageHandler(medinfo, command(BotCommands.MediaInfoCommand) & CustomFilters.authorized))
+
+
+bot.add_handler(
+    MessageHandler(
+        medinfo, command(BotCommands.MediaInfoCommand) & CustomFilters.authorized
+    )
+)

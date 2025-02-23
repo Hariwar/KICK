@@ -19,11 +19,11 @@ incompte_dict = {}
 
 
 async def set_incomplte_task(cid, link):
-    message: Message = await bot.get_messages(cid, int(link.split('/')[-1]))
+    message: Message = await bot.get_messages(cid, int(link.split("/")[-1]))
     if not message.empty:
         try:
-            mesg = message.text.split('\n')
-            if len(mesg) > 1 and mesg[1].startswith('Tag: '):
+            mesg = message.text.split("\n")
+            if len(mesg) > 1 and mesg[1].startswith("Tag: "):
                 try:
                     id_ = int(mesg[1].split()[-1])
                     message.from_user = await bot.get_users(id_)
@@ -32,16 +32,16 @@ async def set_incomplte_task(cid, link):
             elif message.from_user.is_bot and (reply := message.reply_to_message):
                 message.from_user = reply.from_user
             uid = message.from_user.id
-            incompte_dict.setdefault(uid, {'msgs': []})
-            incompte_dict[uid]['msgs'].append(message)
+            incompte_dict.setdefault(uid, {"msgs": []})
+            incompte_dict[uid]["msgs"].append(message)
         except Exception as e:
             LOGGER.error(e)
 
 
 async def start_resume_task(client: Client, tasks: list):
-    user_id = ''
+    user_id = ""
     for msg in tasks:
-        cmd = f'{action(msg)[1:]}{config_dict["CMD_SUFFIX"]}'
+        cmd = f"{action(msg)[1:]}{config_dict['CMD_SUFFIX']}"
         isQbit = isLeech = isYt = isJd = isClone = isVt = False
 
         def _check_cmd(cmds):
@@ -81,7 +81,7 @@ async def start_resume_task(client: Client, tasks: list):
             VidTools(client, message, isLeech=isLeech).newEvent()
         else:
             Mirror(client, message, isQbit, isJd, isLeech).newEvent()
-        await sleep(config_dict['MULTI_TIMEGAP'])
+        await sleep(config_dict["MULTI_TIMEGAP"])
     incompte_dict.pop(user_id, None)
 
 
@@ -89,20 +89,20 @@ async def start_resume_task(client: Client, tasks: list):
 async def auto_resume_all_tasks():
     await sleep(8)
     for tasks in list(incompte_dict.values()):
-        await start_resume_task(bot, tasks['msgs'])
+        await start_resume_task(bot, tasks["msgs"])
 
 
 async def resume_task(client: Client, query: CallbackQuery):
     user_id = query.from_user.id
     if tasks := incompte_dict.get(user_id):
         data = query.data.split()
-        if data[1] == 'yes':
-            await gather(query.answer(), start_resume_task(client, tasks['msgs']))
+        if data[1] == "yes":
+            await gather(query.answer(), start_resume_task(client, tasks["msgs"]))
         else:
-            await query.answer('Incomplete task(s) has been cleared!', True)
+            await query.answer("Incomplete task(s) has been cleared!", True)
             del incompte_dict[user_id]
     else:
-        await query.answer('You didn\'t have incomplete task(s) to resume!', True)
+        await query.answer("You didn't have incomplete task(s) to resume!", True)
 
 
-bot.add_handler(CallbackQueryHandler(resume_task, filters=regex('^resume')))
+bot.add_handler(CallbackQueryHandler(resume_task, filters=regex("^resume")))

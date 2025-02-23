@@ -1,6 +1,10 @@
 from time import time
 
-from bot.helper.ext_utils.status_utils import MirrorStatus, get_readable_file_size, get_readable_time
+from bot.helper.ext_utils.status_utils import (
+    MirrorStatus,
+    get_readable_file_size,
+    get_readable_time,
+)
 
 
 class GofileUploadStatus:
@@ -13,7 +17,7 @@ class GofileUploadStatus:
 
     @staticmethod
     def engine():
-        return 'GoFile'
+        return "GoFile"
 
     @staticmethod
     def status():
@@ -38,16 +42,18 @@ class GofileUploadStatus:
             return 0
 
     def progress(self):
-        return f'{round(self.progress_raw(), 2)}%'
+        return f"{round(self.progress_raw(), 2)}%"
 
     def speed(self):
-        return f'{get_readable_file_size(self._obj.speed)}/s'
+        return f"{get_readable_file_size(self._obj.speed)}/s"
 
     def eta(self):
         try:
-            return get_readable_time((self._size - self._obj.uploaded_bytes) / self._obj.speed)
+            return get_readable_time(
+                (self._size - self._obj.uploaded_bytes) / self._obj.speed
+            )
         except:
-            return '~'
+            return "~"
 
     def gid(self):
         return self._gid

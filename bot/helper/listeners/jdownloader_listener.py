@@ -8,13 +8,24 @@ from bot.helper.ext_utils.status_utils import getTaskByGid
 
 @new_task
 async def _onDownloadComplete(gid):
-    task = await getTaskByGid(f'{gid}')
+    task = await getTaskByGid(f"{gid}")
     if not task:
         return
     if task.listener.select:
-        await retry_function(0, jdownloader.device.downloads.cleanup, 'DELETE_DISABLED', 'REMOVE_LINKS_AND_DELETE_FILES', 'SELECTED', package_ids=jd_downloads[gid]['ids'])
+        await retry_function(
+            0,
+            jdownloader.device.downloads.cleanup,
+            "DELETE_DISABLED",
+            "REMOVE_LINKS_AND_DELETE_FILES",
+            "SELECTED",
+            package_ids=jd_downloads[gid]["ids"],
+        )
     await task.listener.onDownloadComplete()
-    await retry_function(0, jdownloader.device.downloads.remove_links, package_ids=jd_downloads[gid]['ids'])
+    await retry_function(
+        0,
+        jdownloader.device.downloads.remove_links,
+        package_ids=jd_downloads[gid]["ids"],
+    )
     del jd_downloads[gid]
 
 
@@ -24,22 +35,28 @@ async def _jd_listener():
         await sleep(3)
         async with jd_lock:
             if len(jd_downloads) == 0:
-                Intervals['jd'] = ''
+                Intervals["jd"] = ""
                 break
             try:
-                packages = await sync_to_async(jdownloader.device.downloads.query_packages, [{'finished': True}])
+                packages = await sync_to_async(
+                    jdownloader.device.downloads.query_packages, [{"finished": True}]
+                )
             except:
                 continue
-            finished = [pack['uuid'] for pack in packages if pack.get('finished', False)]
+            finished = [
+                pack["uuid"] for pack in packages if pack.get("finished", False)
+            ]
             for gid in finished:
-                if gid in jd_downloads and jd_downloads[gid]['status'] != 'done':
-                    is_finished = all(did in finished for did in jd_downloads[gid]['ids'])
+                if gid in jd_downloads and jd_downloads[gid]["status"] != "done":
+                    is_finished = all(
+                        did in finished for did in jd_downloads[gid]["ids"]
+                    )
                     if is_finished:
-                        jd_downloads[gid]['status'] = 'done'
+                        jd_downloads[gid]["status"] = "done"
                         _onDownloadComplete(gid)
 
 
 async def onDownloadStart():
     async with jd_lock:
-        if not Intervals['jd']:
-            Intervals['jd'] = _jd_listener()
+        if not Intervals["jd"]:
+            Intervals["jd"] = _jd_listener()
