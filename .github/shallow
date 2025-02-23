@@ -1,0 +1,3 @@
+git fetch --all
+git fetch --depth=2147483647
+git log --oneline --graph --all
