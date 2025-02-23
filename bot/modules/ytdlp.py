@@ -317,7 +317,9 @@ class YtDlp(TaskListener):
         ):
             self.removeFromSameDir()
             await auto_delete_message(
-                self.message, fmsg, self.message.reply_to_message
+                self.message,
+                fmsg,
+                self.message.reply_to_message,
             )
             return
 

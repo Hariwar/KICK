@@ -33,7 +33,7 @@ class ButtonMaker:
                 )
             case _:
                 self._button.append(
-                    InlineKeyboardButton(text=key, callback_data=data)
+                    InlineKeyboardButton(text=key, callback_data=data),
                 )
 
     def build_menu(self, b_cols=1, h_cols=8, f_cols=8):

@@ -21,7 +21,8 @@ async def list_buttons(user_id, isRecursive=True, user_token=False):
         f"list_types {user_id} folders {isRecursive} {user_token}",
     )
     buttons.ibutton(
-        "Files", f"list_types {user_id} files {isRecursive} {user_token}"
+        "Files",
+        f"list_types {user_id} files {isRecursive} {user_token}",
     )
     buttons.ibutton("Both", f"list_types {user_id} both {isRecursive} {user_token}")
     buttons.ibutton(

@@ -258,7 +258,8 @@ class Mirror(TaskListener):
             b_msg.append(f"{self.bulk[0]} -i {len(self.bulk)} {self.options}")
             nextmsg = await sendMessage(" ".join(b_msg), self.message)
             nextmsg = await self.client.get_messages(
-                self.message.chat.id, nextmsg.id
+                self.message.chat.id,
+                nextmsg.id,
             )
             if self.message.from_user:
                 nextmsg.from_user = self.message.from_user
@@ -312,7 +313,8 @@ class Mirror(TaskListener):
 
         if self.isGofile:
             await editMessage(
-                "<i>GoFile upload has been enabled!</i>", self.editable
+                "<i>GoFile upload has been enabled!</i>",
+                self.editable,
             )
             await sleep(0.5)
 

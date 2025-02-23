@@ -43,7 +43,8 @@ async def speedtest(_, message: Message):
 <b>└ LAT/LON </b>{result["client"]["lat"]}/{result["client"]["lon"]}
 """
         await gather(
-            deleteMessage(msg), sendPhoto(caption, message, result["share"])
+            deleteMessage(msg),
+            sendPhoto(caption, message, result["share"]),
         )
     except Exception as e:
         LOGGER.error(e)

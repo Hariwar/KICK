@@ -358,7 +358,8 @@ class YoutubeDLHelper:
             LOGGER.info("File/folder already in Drive!")
             self._is_cancelled = True
             await self._listener.onDownloadError(
-                "File/folder already in Drive!", file
+                "File/folder already in Drive!",
+                file,
             )
             return
 
@@ -420,7 +421,7 @@ class YoutubeDLHelper:
             elif value.lower() == "false":
                 value = False
             elif value.startswith(("{", "[", "(")) and value.endswith(
-                ("}", "]", ")")
+                ("}", "]", ")"),
             ):
                 value = literal_eval(value)
 

@@ -59,7 +59,8 @@ async def add_qb_torrent(
         )
         if op.lower() == "ok.":
             tor_info = await sync_to_async(
-                client.torrents_info, tag=f"{listener.mid}"
+                client.torrents_info,
+                tag=f"{listener.mid}",
             )
             if len(tor_info) == 0:
                 while True:
@@ -84,7 +85,8 @@ async def add_qb_torrent(
             return
         async with task_dict_lock:
             task_dict[listener.mid] = QbittorrentStatus(
-                listener, queued=add_to_queue
+                listener,
+                queued=add_to_queue,
             )
         await onDownloadStart(f"{listener.mid}")
         if add_to_queue:
@@ -97,7 +99,9 @@ async def add_qb_torrent(
             async with queue_dict_lock:
                 non_queued_dl.add(listener.mid)
             LOGGER.info(
-                "QbitDownload started: %s - Hash: %s", tor_info.name, ext_hash
+                "QbitDownload started: %s - Hash: %s",
+                tor_info.name,
+                ext_hash,
             )
         await listener.onDownloadStart()
         if config_dict["BASE_URL"] and listener.select:

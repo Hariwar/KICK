@@ -225,7 +225,10 @@ class VidEcxecutor(FFProgress):
         return self._up_path
 
     async def _name_base_dir(
-        self, path, info: str | None = None, multi: bool = False
+        self,
+        path,
+        info: str | None = None,
+        multi: bool = False,
     ):
         base_dir, file_name = ospath.split(path)
         if not self.name or multi:
@@ -570,7 +573,7 @@ class VidEcxecutor(FFProgress):
 
             if not ref_files and len(sub_files) > 1:
                 ref_files = list(
-                    filter(lambda x: (x, sub_files.remove(x)), sub_files)
+                    filter(lambda x: (x, sub_files.remove(x)), sub_files),
                 )
 
             if not ref_files or not sub_files:

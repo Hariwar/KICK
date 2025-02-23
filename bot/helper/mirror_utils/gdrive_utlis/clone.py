@@ -61,7 +61,8 @@ class gdClone(GoogleDriveHelper):
             mime_type = meta.get("mimeType")
             if mime_type == self.G_DRIVE_DIR_MIME_TYPE:
                 dir_id = self.create_directory(
-                    meta.get("name"), self.listener.upDest
+                    meta.get("name"),
+                    self.listener.upDest,
                 )
                 self._cloneFolder(meta.get("name"), meta.get("id"), dir_id)
                 durl = self.G_DRIVE_DIR_BASE_DOWNLOAD_URL.format(dir_id)

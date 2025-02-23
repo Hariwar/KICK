@@ -27,7 +27,9 @@ from bot.helper.telegram_helper.message_utils import update_status_message
 
 async def _remove_torrent(client, hash_, tag):
     await sync_to_async(
-        client.torrents_delete, torrent_hashes=hash_, delete_files=True
+        client.torrents_delete,
+        torrent_hashes=hash_,
+        delete_files=True,
     )
     async with qb_listener_lock:
         QbTorrents.pop(tag, None)
@@ -100,7 +102,8 @@ async def _onDownloadComplete(tor):
             await clean_unwanted(task.listener.dir)
             path = tor.content_path.rsplit("/", 1)[0]
             res = await sync_to_async(
-                task.client.torrents_files, torrent_hash=ext_hash
+                task.client.torrents_files,
+                torrent_hash=ext_hash,
             )
             for f in res:
                 if f.priority == 0:

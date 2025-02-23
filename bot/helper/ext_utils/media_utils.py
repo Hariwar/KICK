@@ -649,7 +649,9 @@ async def createArchive(listener, scr_path, dest_path, size, pswd, mpart=False):
             await clean_target(scr_path, True)
         return True
     LOGGER.error(
-        "%s. Unable to zip this path: %s", stderr.decode().strip(), scr_path
+        "%s. Unable to zip this path: %s",
+        stderr.decode().strip(),
+        scr_path,
     )
     return True
 
@@ -739,7 +741,8 @@ class GenSS:
         if not self._images:
             self._error = "Failed generated screenshot, something wrong with url or not video in url!"
             LOGGER.info(
-                "Failed Generating Screenshot: %s", ospath.basename(self._path)
+                "Failed Generating Screenshot: %s",
+                ospath.basename(self._path),
             )
         await clean_target(self._ss_path)
 

@@ -196,7 +196,8 @@ async def check_storage_threshold(size: int, arch=False, alloc=False):
 
 def get_base_name(orig_path):
     extension = next(
-        (ext for ext in ARCH_EXT if orig_path.lower().endswith(ext)), ""
+        (ext for ext in ARCH_EXT if orig_path.lower().endswith(ext)),
+        "",
     )
     if extension != "":
         return re_split(f"{extension}$", orig_path, maxsplit=1, flags=IGNORECASE)[0]

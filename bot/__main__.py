@@ -189,7 +189,9 @@ async def start(client: Client, message: Message):
                 buttons.reset()
                 save_message = config_dict["SAVE_MESSAGE"]
                 for mode, link in zip(
-                    ["Stream", "Download"], await gen_link(msg), strict=False
+                    ["Stream", "Download"],
+                    await gen_link(msg),
+                    strict=False,
                 ):
                     if link:
                         buttons.button_link(

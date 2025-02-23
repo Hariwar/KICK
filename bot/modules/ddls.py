@@ -55,7 +55,9 @@ async def generate_ddl(_, message: Message):
         if reply_to and is_file:
             cmsg = await copyMessage(config_dict["LEECH_LOG"], reply_to)
             for mode, link in zip(
-                ["Stream", "Download"], await gen_link(cmsg), strict=False
+                ["Stream", "Download"],
+                await gen_link(cmsg),
+                strict=False,
             ):
                 if link:
                     buttons.button_link(

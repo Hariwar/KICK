@@ -58,7 +58,8 @@ class ScrapeHelper:
         pfunc = partial(stop_scrapper, obj=self)
         handler = self._client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^scrap") & user(self._user_id)
+                pfunc,
+                filters=regex("^scrap") & user(self._user_id),
             ),
             group=-1,
         )
@@ -186,7 +187,7 @@ class ScrapeHelper:
                         f'<a href="{slink}">Link {i}</a>'
                         for i, slink in enumerate(
                             HTML(await self._resp(link)).xpath(
-                                "//article//p/a/@href"
+                                "//article//p/a/@href",
                             ),
                             1,
                         )
@@ -205,7 +206,8 @@ class ScrapeHelper:
             if self._pm and self._isSuperGroup:
                 await copyMessage(self._user_id, msg)
             await self._onScrapSuccess(
-                len(links), f"<b>├ Mode: </b>{mode.title()}\n"
+                len(links),
+                f"<b>├ Mode: </b>{mode.title()}\n",
             )
         else:
             await self._onScrapError("ERROR: Can't find any link!")
@@ -287,7 +289,9 @@ async def scrapper(client: Client, message: Message):
     reply_to = message.reply_to_message
 
     if fmsg := await UseCheck(message).run(
-        forpremi=True, session=True, send_pm=True
+        forpremi=True,
+        session=True,
+        send_pm=True,
     ):
         await auto_delete_message(message, fmsg, reply_to)
         return

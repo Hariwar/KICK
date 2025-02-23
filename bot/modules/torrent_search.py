@@ -55,7 +55,8 @@ async def initiate_search_tools():
     elif qb_plugins:
         for plugin in qb_plugins:
             await sync_to_async(
-                qbclient.search_uninstall_plugin, names=plugin["name"]
+                qbclient.search_uninstall_plugin,
+                names=plugin["name"],
             )
         globals()["PLUGINS"] = []
     await sync_to_async(qbclient.auth_log_out)
@@ -145,7 +146,7 @@ async def getResult(
 
             if style == "tele":
                 contents.append(
-                    str(index).zfill(3) + ". " + msg.replace("<br>", "\n")
+                    str(index).zfill(3) + ". " + msg.replace("<br>", "\n"),
                 )
                 msg = ""
             elif len(msg.encode("utf-8")) > 39000:
@@ -495,7 +496,8 @@ class TorSeacrh:
                     await sync_to_async(qbclient.auth_log_out)
                 for siteName in PLUGINS:
                     buttons.button_data(
-                        siteName.title(), f"torser {siteName} plugin"
+                        siteName.title(),
+                        f"torser {siteName} plugin",
                     )
                 buttons.button_data("All", "torser all plugin")
                 if SITES and SEARCH_PLUGINS:

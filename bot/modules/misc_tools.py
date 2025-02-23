@@ -457,7 +457,10 @@ class Misc(MiscTool):
                     buttons.button_link("Source", self.query)
                     await gather(
                         sendPhoto(
-                            caption, self.message, photo, buttons.build_menu(1)
+                            caption,
+                            self.message,
+                            photo,
+                            buttons.build_menu(1),
                         ),
                         deleteMessage(self.editable),
                     )

@@ -42,7 +42,7 @@ async def kill_route():
         try:
             await (
                 await create_subprocess_exec(
-                    *["cloudflared", "service", "uninstall"]
+                    *["cloudflared", "service", "uninstall"],
                 )
             ).wait()
         except Exception as e:

@@ -49,7 +49,10 @@ async def send(msg, message):
         async with aiopen("output.txt", "w", encoding="utf-8") as f:
             await f.write(msg)
         await sendFile(
-            message, "output.txt", "Eval output", config_dict["IMAGE_TXT"]
+            message,
+            "output.txt",
+            "Eval output",
+            config_dict["IMAGE_TXT"],
         )
     else:
         LOGGER.info("OUT: '%s'", msg)
@@ -85,7 +88,8 @@ async def do(func, message: Message):
     env = namespace_of(message)
     chdir(getcwd())
     async with aiopen(
-        ospath.join(getcwd(), "bot", "modules", "temp.txt"), "w"
+        ospath.join(getcwd(), "bot", "modules", "temp.txt"),
+        "w",
     ) as temp:
         await temp.write(body)
     stdout = StringIO()

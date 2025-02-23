@@ -327,7 +327,8 @@ async def cb_extra(_, query: CallbackQuery, obj: ExtraSelect):
                         for mapindex in sdata:
                             info = ddict["stream"][mapindex]["info"]
                             ddict["stream"][mapindex]["info"] = info.replace(
-                                "✅ ", ""
+                                "✅ ",
+                                "",
                             )
                         sdata.clear()
                         await obj.update_message(*obj.streams_select())
@@ -339,7 +340,8 @@ async def cb_extra(_, query: CallbackQuery, obj: ExtraSelect):
                         obj.event.set()
                     else:
                         await query.answer(
-                            "Please select at least one stream!", True
+                            "Please select at least one stream!",
+                            True,
                         )
                 case "audio" | "subtitle" as value:
                     await query.answer()

@@ -263,7 +263,8 @@ async def sendFile(message: Message, doc: str, caption: str = "", thumb=None):
 
 
 async def auto_delete_message(
-    *args, stime=config_dict["AUTO_DELETE_MESSAGE_DURATION"]
+    *args,
+    stime=config_dict["AUTO_DELETE_MESSAGE_DURATION"],
 ):
     if stime:
         await sleep(stime)

@@ -146,7 +146,8 @@ async def cancel_all_update(_, query: CallbackQuery):
         await query.answer("Not yours!", True)
         return
     if data[2] == "all" and not await CustomFilters.sudo(
-        "", message.reply_to_message
+        "",
+        message.reply_to_message,
     ):
         await query.answer("What are you doing? It's say for sudo!!", True)
         return

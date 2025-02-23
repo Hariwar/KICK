@@ -241,7 +241,7 @@ async def load_config():
     SAVE_SESSION_STRING = environ.get("SAVE_SESSION_STRING", "")
     USERBOT_LEECH = environ.get("USERBOT_LEECH", "False").lower() == "true"
     AUTO_DELETE_MESSAGE_DURATION = int(
-        environ.get("AUTO_DELETE_MESSAGE_DURATION", 30)
+        environ.get("AUTO_DELETE_MESSAGE_DURATION", 30),
     )
     AUTO_DELETE_UPLOAD_MESSAGE_DURATION = int(
         environ.get("AUTO_DELETE_UPLOAD_MESSAGE_DURATION", 0),

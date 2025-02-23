@@ -240,7 +240,8 @@ class Extension:
 
     async def setEnabled(self, id, enabled):
         return await self.device.action(
-            f"{self.url}/setEnabled", params=[id, enabled]
+            f"{self.url}/setEnabled",
+            params=[id, enabled],
         )
 
 
@@ -913,7 +914,7 @@ class MyJdApi:
         self.__server_encryption_token = new_token.digest()
         new_token = sha256()
         new_token.update(
-            self.__device_secret + bytearray.fromhex(self.__session_token)
+            self.__device_secret + bytearray.fromhex(self.__session_token),
         )
         self.__device_encryption_token = new_token.digest()
 
@@ -1161,7 +1162,7 @@ class MyJdApi:
                     http_method,
                     request_url,
                     headers={
-                        "Content-Type": "application/aesjson-jd; charset=utf-8"
+                        "Content-Type": "application/aesjson-jd; charset=utf-8",
                     },
                     content=encrypted_data,
                 )
@@ -1200,7 +1201,9 @@ class MyJdApi:
                 msg += "DATA:\n" + data
             raise (
                 MYJDApiException.get_exception(
-                    error_msg["src"], error_msg["type"], msg
+                    error_msg["src"],
+                    error_msg["type"],
+                    msg,
                 )
             )
         if action is None:

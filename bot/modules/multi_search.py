@@ -46,7 +46,11 @@ from bot.helper.telegram_helper.message_utils import (
 
 class MultiSerach:
     def __init__(
-        self, clinet: Client, message: Message, editable: Message, query: str
+        self,
+        clinet: Client,
+        message: Message,
+        editable: Message,
+        query: str,
     ):
         self._client: Client = clinet
         self._reply_to = None
@@ -440,7 +444,8 @@ async def cb(_, query: CallbackQuery, obj: MultiSerach):
                     )
                 if not userbot:
                     await query.answer(
-                        "Telegram search required session string!", True
+                        "Telegram search required session string!",
+                        True,
                     )
                     return
                 obj.engine, obj.search = userbot, True

@@ -201,7 +201,10 @@ class Info:
     @staticmethod
     @handle_message
     async def _editAnime(
-        caption: str, message: Message, photo: str, reply_markup=None
+        caption: str,
+        message: Message,
+        photo: str,
+        reply_markup=None,
     ):
         return await bot.edit_message_media(
             message.chat.id,
@@ -344,7 +347,7 @@ class Info:
             name = item.xpath(".//h2//text()")
             title = " ".join(list(filter(lambda x: x.strip(), name)))
             if score := item.xpath(
-                './/div[@class="user_score_chart"]/@data-percent'
+                './/div[@class="user_score_chart"]/@data-percent',
             ):
                 data["rating"] = f"⭐️ <code>{score[0]}</code>"
             data["genre"] = self._list_to_str(
@@ -385,7 +388,7 @@ class Info:
             if provider := item.xpath('.//div[@class="provider"]//@alt'):
                 data["provider"] = f"<code>{provider[0]}</code>"
             if trailer := item.xpath(
-                './/a[@class="no_click play_trailer"]/@data-id'
+                './/a[@class="no_click play_trailer"]/@data-id',
             ):
                 content["trailer"] = f"https://youtu.be/{trailer[0]}"
 
@@ -426,7 +429,7 @@ class Info:
                         f'<a href="{self._tmbd_url + lnk[0]}">{net[0].strip(".")}</a>'
                     )
             if type := item.xpath(
-                './/text()[contains(., "Type")]/ancestor::p//text()'
+                './/text()[contains(., "Type")]/ancestor::p//text()',
             ):
                 data["type"] = f"<code>{type[-1].strip()}</code>"
             if lang := item.xpath(
@@ -485,7 +488,7 @@ class Info:
         typee = f"~ {imdata['@type']}" if imdata.get("@type") else ""
         year = "N/A"
         if years := html.xpath(
-            '//h1[@data-testid="hero__pageTitle"]/..//ul//text()'
+            '//h1[@data-testid="hero__pageTitle"]/..//ul//text()',
         ):
             year = next(filter(lambda x: re_match(r"\d{4}", x), years))
         text += f"<a href='{url}'><b>{imdata['name']} ({year})</b></a> <b>{typee}</b>\n\n"
@@ -828,7 +831,8 @@ class Info:
                                 movieid = re_findall(r"tt(\d+)", movie.get("id"))[0]
                                 text += f"{count}. <b>{mname} {year} ~ {typee}</b>\n"
                                 buttons.button_data(
-                                    count, f"info|imdbdata|{movieid}"
+                                    count,
+                                    f"info|imdbdata|{movieid}",
                                 )
                         case _:
                             image, bnum = config_dict["IMAGE_MDL"], 5
@@ -913,7 +917,10 @@ class Info:
             else editPhoto
         )
         if not await editData(
-            text, self.editable, image, buttons.build_menu(bnum, 3)
+            text,
+            self.editable,
+            image,
+            buttons.build_menu(bnum, 3),
         ):
             await editData(
                 text,

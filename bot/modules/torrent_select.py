@@ -150,7 +150,8 @@ async def get_confirm(_, query: CallbackQuery):
                 if len(id_) > 20:
                     tor_info = (
                         await sync_to_async(
-                            task.client.torrents_info, torrent_hash=id_
+                            task.client.torrents_info,
+                            torrent_hash=id_,
                         )
                     )[0]
                     path = tor_info.content_path.rsplit("/", 1)[0]

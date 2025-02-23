@@ -157,7 +157,9 @@ class gdUpload(GoogleDriveHelper):
 
         if ospath.getsize(file_path) == 0:
             media_body = MediaFileUpload(
-                file_path, mimetype=mime_type, resumable=False
+                file_path,
+                mimetype=mime_type,
+                resumable=False,
             )
             response = (
                 self.service.files()

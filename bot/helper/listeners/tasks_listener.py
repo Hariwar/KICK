@@ -474,7 +474,9 @@ class TaskListener(TaskConfig):
                         chat_id := config_dict["LEECH_LOG"]
                     ) and ONCOMPLETE_LEECH_LOG:
                         await copyMessage(
-                            chat_id, uploadmsg, buttons_scr.build_menu(2)
+                            chat_id,
+                            uploadmsg,
+                            buttons_scr.build_menu(2),
                         )
                 if STICKERID_LEECH := config_dict["STICKERID_LEECH"]:
                     await sendSticker(STICKERID_LEECH, self.message)
@@ -502,7 +504,9 @@ class TaskListener(TaskConfig):
             if link or rclonePath:
                 if self.isGofile:
                     golink = await sync_to_async(
-                        short_url, self.isGofile, self.user_id
+                        short_url,
+                        self.isGofile,
+                        self.user_id,
                     )
                     buttons.button_link("GoFile Link", golink)
                 if link:
@@ -540,7 +544,9 @@ class TaskListener(TaskConfig):
                         buttons.button_link(
                             "Stream Link",
                             await sync_to_async(
-                                short_url, stream_link, self.user_id
+                                short_url,
+                                stream_link,
+                                self.user_id,
                             ),
                         )
                 if not rclonePath:

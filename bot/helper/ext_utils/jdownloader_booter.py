@@ -130,7 +130,8 @@ class JDownloader(MyJdApi):
         self.device.enable_direct_connection()
         self.error = ""
         LOGGER.info(
-            "JDownloader have been connected on device %s!", self._device_name
+            "JDownloader have been connected on device %s!",
+            self._device_name,
         )
 
 

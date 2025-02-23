@@ -52,7 +52,8 @@ async def _onDownloadStarted(api, gid):
             LOGGER.info("File/folder already in Drive!")
             task.listener.name = name
             await task.listener.onDownloadError(
-                "File/folder already in Drive!", file
+                "File/folder already in Drive!",
+                file,
             )
             await sync_to_async(api.remove, [download], force=True, files=True)
             return
@@ -132,7 +133,9 @@ async def _onBtDownloadComplete(api, gid):
     if task.listener.seed:
         try:
             await sync_to_async(
-                api.set_options, {"max-upload-limit": "0"}, [download]
+                api.set_options,
+                {"max-upload-limit": "0"},
+                [download],
             )
         except Exception as e:
             LOGGER.error(
@@ -162,7 +165,10 @@ async def _onBtDownloadComplete(api, gid):
             async with task_dict_lock:
                 if task.listener.mid not in task_dict:
                     await sync_to_async(
-                        api.remove, [download], force=True, files=True
+                        api.remove,
+                        [download],
+                        force=True,
+                        files=True,
                     )
                     return
                 task_dict[task.listener.mid] = Aria2Status(task.listener, gid, True)

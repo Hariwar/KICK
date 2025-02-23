@@ -315,7 +315,7 @@ class RcloneTransferHelper:
             and not self._listener.rcFlags
         ):
             cmd.extend(
-                ("--drive-chunk-size", "128M", "--drive-upload-cutoff", "128M")
+                ("--drive-chunk-size", "128M", "--drive-upload-cutoff", "128M"),
             )
         result = await self._start_upload(cmd, remote_type, using_sa)
         if not result:
@@ -363,7 +363,8 @@ class RcloneTransferHelper:
         if drive_id:
             try:
                 dst_remote_opt = await self._get_remote_options(
-                    config_path, dst_remote
+                    config_path,
+                    dst_remote,
                 )
             except Exception as err:
                 await self._listener.onUploadError(err)
@@ -477,7 +478,9 @@ class RcloneTransferHelper:
             return res, destination
         if code != -9:
             LOGGER.error(
-                "While getting link. Path: %s | Stderr: %s", destination, err
+                "While getting link. Path: %s | Stderr: %s",
+                destination,
+                err,
             )
             return None, destination
         return None

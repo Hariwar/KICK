@@ -94,7 +94,7 @@ class gdDownload(GoogleDriveHelper):
             elif not ospath.isfile(
                 f"{path}{filename}",
             ) and not filename.lower().endswith(
-                tuple(self.listener.extensionFilter)
+                tuple(self.listener.extensionFilter),
             ):
                 self._download_file(file_id, path, filename, mime_type)
             if self.is_cancelled:
@@ -107,7 +107,8 @@ class gdDownload(GoogleDriveHelper):
     )
     def _download_file(self, file_id, path, filename, mime_type):
         request = self.service.files().get_media(
-            fileId=file_id, supportsAllDrives=True
+            fileId=file_id,
+            supportsAllDrives=True,
         )
         filename = filename.replace("/", "")
         if len(filename.encode()) > 255:
@@ -151,7 +152,10 @@ class gdDownload(GoogleDriveHelper):
                         self.switchServiceAccount()
                         LOGGER.info("Got: %s, Trying Again...", reason)
                         return self._download_file(
-                            file_id, path, filename, mime_type
+                            file_id,
+                            path,
+                            filename,
+                            mime_type,
                         )
 
                     LOGGER.error("Got: %s", reason)

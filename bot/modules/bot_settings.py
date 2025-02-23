@@ -213,7 +213,9 @@ async def get_buttons(key=None, edit_type=None):
 
 
 async def update_buttons(
-    message: Message, key: str | None = None, edit_type: str | None = None
+    message: Message,
+    key: str | None = None,
+    edit_type: str | None = None,
 ):
     msg, image, buttons = await get_buttons(key, edit_type)
     if config_dict["ENABLE_IMAGE_MODE"]:
@@ -301,7 +303,10 @@ async def edit_variable(_, message: Message, omsg: Message, key: str):
     elif key == "USER_SESSION_STRING":
         await intialize_userbot()
     LOGGER.info(
-        "Change var %s = %s: %s", key, value.__class__.__name__.upper(), value
+        "Change var %s = %s: %s",
+        key,
+        value.__class__.__name__.upper(),
+        value,
     )
     await gather(update_buttons(omsg, "var"), deleteMessage(message))
     if DATABASE_URL:
@@ -549,7 +554,8 @@ async def edit_bot_settings(client: Client, query: CallbackQuery):
     handler_dict[message.chat.id] = False
     if data[1] == "close":
         await gather(
-            query.answer(), deleteMessage(message, message.reply_to_message)
+            query.answer(),
+            deleteMessage(message, message.reply_to_message),
         )
     elif data[1] == "back":
         await query.answer()

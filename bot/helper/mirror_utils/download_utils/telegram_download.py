@@ -74,7 +74,8 @@ class TelegramDownloadHelper:
             LOGGER.info("Download from Telegram: %s", self._listener.name)
         else:
             LOGGER.info(
-                "Start Queued Download from Telegram: %s", self._listener.name
+                "Start Queued Download from Telegram: %s",
+                self._listener.name,
             )
 
     async def _onDownloadProgress(self, current, total):

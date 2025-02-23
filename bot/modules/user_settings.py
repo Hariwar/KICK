@@ -583,11 +583,13 @@ async def get_user_settings(from_user, data: str, uset_data: str):
                     f"userset {user_id} prepare {key}",
                 )
                 buttons.button_data(
-                    f"Remove {butkey}", f"userset {user_id} rem_{key}"
+                    f"Remove {butkey}",
+                    f"userset {user_id} rem_{key}",
                 )
             else:
                 buttons.button_data(
-                    f"Set {butkey}", f"userset {user_id} prepare {key}"
+                    f"Set {butkey}",
+                    f"userset {user_id} prepare {key}",
                 )
         if qdata:
             buttons.button_data("Back", f"userset {user_id} {qdata}")
@@ -845,7 +847,8 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
             else:
                 await update_user_ldata(user_id, value[4:], "")
             await gather(
-                query.answer(), update_user_settings(query, qdata, uset_data)
+                query.answer(),
+                update_user_settings(query, qdata, uset_data),
             )
         case (
             "enable_pm"
@@ -863,7 +866,8 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
             if value in ("stop_duplicate", "use_sa"):
                 qdata = "gdtool"
             await gather(
-                query.answer(), update_user_settings(query, qdata, uset_data)
+                query.answer(),
+                update_user_settings(query, qdata, uset_data),
             )
         case "capmode" | "gdtool" | "rctool" as value:
             await gather(query.answer(), update_user_settings(query, value))
@@ -876,7 +880,8 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
                 await query.answer("Already Selected!", True)
                 return
             await gather(
-                query.answer(), update_user_ldata(user_id, "zipmode", zmode)
+                query.answer(),
+                update_user_ldata(user_id, "zipmode", zmode),
             )
             await update_user_settings(query, "zipmode", zmode)
         case "capmono" | "capitalic" | "capbold" | "capnormal" as value:

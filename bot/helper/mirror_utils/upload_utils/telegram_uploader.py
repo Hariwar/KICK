@@ -131,7 +131,9 @@ class TgUploader:
                                 for subkey, msgs in list(value.items()):
                                     if len(msgs) > 1:
                                         await self._send_media_group(
-                                            msgs, subkey, key
+                                            msgs,
+                                            subkey,
+                                            key,
                                         )
                     self._last_msg_in_group = False
                     self._last_uploaded = 0
@@ -225,7 +227,9 @@ class TgUploader:
             if not is_image and thumb is None:
                 file_name = ospath.splitext(file)[0]
                 thumb_path = ospath.join(
-                    self._path, "yt-dlp-thumb", f"{file_name}.jpg"
+                    self._path,
+                    "yt-dlp-thumb",
+                    f"{file_name}.jpg",
                 )
                 if await aiopath.isfile(thumb_path):
                     thumb = thumb_path
@@ -421,7 +425,8 @@ class TgUploader:
                 name = get_base_name(file_)
                 ext = file_.split(name, 1)[1]
             elif match := re_match(
-                r".+(?=\..+\.0*\d+$)|.+(?=\.part\d+\..+$)", file_
+                r".+(?=\..+\.0*\d+$)|.+(?=\.part\d+\..+$)",
+                file_,
             ):
                 name = match.group(0)
                 ext = file_.split(name, 1)[1]
@@ -591,7 +596,9 @@ class TgUploader:
         if config_dict["SAVE_MESSAGE"] and self._listener.isSuperChat:
             self._buttons.button_data("Save Message", "save", "footer")
         for mode, link in zip(
-            ["Stream", "Download"], await gen_link(self._send_msg), strict=False
+            ["Stream", "Download"],
+            await gen_link(self._send_msg),
+            strict=False,
         ):
             if link:
                 self._buttons.button_link(
@@ -614,7 +621,8 @@ class TgUploader:
             caption = self._caption_mode(msg.caption.split("\n")[0])
             if key == "videos":
                 input_media = InputMediaVideo(
-                    media=msg.video.file_id, caption=caption
+                    media=msg.video.file_id,
+                    caption=caption,
                 )
             else:
                 input_media = InputMediaDocument(

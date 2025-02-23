@@ -754,7 +754,7 @@ def krakenfiles(url: str):
             data = {"token": token[0]}
         else:
             raise DirectDownloadLinkException(
-                "ERROR: Unable to find token for post."
+                "ERROR: Unable to find token for post.",
             )
         try:
             _json = session.post(post_url, data=data).json()
@@ -1008,7 +1008,7 @@ def pixeldrain(url: str):
     if resp["success"]:
         return dl_link
     raise DirectDownloadLinkException(
-        f"ERROR: Cant't download due {resp['message']}."
+        f"ERROR: Cant't download due {resp['message']}.",
     )
 
 
@@ -1123,7 +1123,9 @@ def sendcm(url: str):
         folders_urls = html.xpath("//h6/a/@href")
         folders_names = html.xpath("//h6/a/text()")
         for folders_url, folders_name in zip(
-            folders_urls, folders_names, strict=False
+            folders_urls,
+            folders_names,
+            strict=False,
         ):
             folders.append(
                 {
@@ -1151,7 +1153,10 @@ def sendcm(url: str):
         file_names = html.xpath('//tr[@class="selectable"]//a/text()')
         sizes = html.xpath('//tr[@class="selectable"]//span/text()')
         for href, file_name, size_text in zip(
-            hrefs, file_names, sizes, strict=False
+            hrefs,
+            file_names,
+            sizes,
+            strict=False,
         ):
             files.append(
                 {
@@ -1183,7 +1188,7 @@ def sendcm(url: str):
     except Exception as e:
         session.close()
         raise DirectDownloadLinkException(
-            f"ERROR: {e} While getting main Html."
+            f"ERROR: {e} While getting main Html.",
         ) from e
     try:
         _writeContents(mainHtml, details["title"])
@@ -1193,7 +1198,7 @@ def sendcm(url: str):
     except Exception as e:
         session.close()
         raise DirectDownloadLinkException(
-            f"ERROR: {e} While writing Contents."
+            f"ERROR: {e} While writing Contents.",
         ) from e
     session.close()
     if len(details["contents"]) == 1:
@@ -1305,7 +1310,8 @@ def streamvid(url: str):
                     "ERROR: Direct link script not found!",
                 )
             if directLink := re_findall(
-                r'document\.location\.href="(.*)"', script[0]
+                r'document\.location\.href="(.*)"',
+                script[0],
             ):
                 return directLink[0]
             raise DirectDownloadLinkException(
@@ -1386,7 +1392,8 @@ def terabox(url):
                         )
                 else:
                     newFolderPath = ospath.join(
-                        folderPath, content["server_filename"]
+                        folderPath,
+                        content["server_filename"],
                     )
                 _fetch_links(session, content["path"], newFolderPath)
             else:
@@ -1445,7 +1452,11 @@ def uploadbaz(url: str):
             "method_premium": "",
         }
         response = cget(
-            "post", url, headers=headers, data=data, allow_redirects=False
+            "post",
+            url,
+            headers=headers,
+            data=data,
+            allow_redirects=False,
         )
         return response.headers["Location"]
     except Exception as e:
@@ -1481,7 +1492,11 @@ def userscloud(url: str):
             "method_premium": "",
         }
         response = cget(
-            "post", url, headers=headers, data=data, allow_redirects=False
+            "post",
+            url,
+            headers=headers,
+            data=data,
+            allow_redirects=False,
         )
         return response.headers["Location"]
     except Exception as e:
@@ -1598,7 +1613,11 @@ def mp4upload(url: str):
             "method_premium": "",
         }
         response = cget(
-            "post", url, headers=headers, data=data, allow_redirects=False
+            "post",
+            url,
+            headers=headers,
+            data=data,
+            allow_redirects=False,
         )
         bypassed_json = {
             "bypassed_url": response.headers["Location"],
@@ -1633,7 +1652,7 @@ def sharerpw(url: str, forced_login=False):
     SHARERPW_LARAVEL_SESSION = config_dict["SHARERPW_LARAVEL_SESSION"]
     if not SHARERPW_XSRF_TOKEN or not SHARERPW_LARAVEL_SESSION:
         raise DirectDownloadLinkException(
-            "ERROR: Sharer Token/Session not provided!"
+            "ERROR: Sharer Token/Session not provided!",
         )
     try:
         client = create_scraper(allow_brotli=False)
@@ -1784,7 +1803,11 @@ def sharer_scraper(url):
     )
     try:
         res = cget(
-            "POST", url, cookies=res.cookies, headers=headers, data=data
+            "POST",
+            url,
+            cookies=res.cookies,
+            headers=headers,
+            data=data,
         ).json()
     except Exception as e:
         raise DirectDownloadLinkException(f"ERROR: {e}") from e
@@ -1845,7 +1868,7 @@ def mediafireFolder(url: str):
             ).json()
         except Exception as e:
             raise DirectDownloadLinkException(
-                f"ERROR: {e} While getting info"
+                f"ERROR: {e} While getting info",
             ) from e
         _res = _json["response"]
         if "folder_infos" in _res:

@@ -102,7 +102,8 @@ async def add_jd_download(listener: task.TaskListener, path: str):
 
         try:
             await wait_for(
-                retry_function(0, jdownloader.device.jd.version), timeout=5
+                retry_function(0, jdownloader.device.jd.version),
+                timeout=5,
             )
         except:
             is_connected = await sync_to_async(jdownloader.jdconnect)

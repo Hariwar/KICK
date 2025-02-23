@@ -110,7 +110,8 @@ class QbittorrentStatus:
     async def cancel_task(self):
         await sync_to_async(self._update)
         await sync_to_async(
-            self.client.torrents_pause, torrent_hashes=self._info.hash
+            self.client.torrents_pause,
+            torrent_hashes=self._info.hash,
         )
         if not self.seeding:
             if self.queued:
@@ -127,7 +128,8 @@ class QbittorrentStatus:
                 delete_files=True,
             )
             await sync_to_async(
-                self.client.torrents_delete_tags, tags=self._info.tags
+                self.client.torrents_delete_tags,
+                tags=self._info.tags,
             )
             async with qb_listener_lock:
                 QbTorrents.pop(self._info.tags, None)

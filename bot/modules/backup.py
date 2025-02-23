@@ -224,5 +224,5 @@ bot.add_handler(
     ),
 )
 bot.add_handler(
-    CallbackQueryHandler(backup_message_hanlder, filters=regex("^backup"))
+    CallbackQueryHandler(backup_message_hanlder, filters=regex("^backup")),
 )

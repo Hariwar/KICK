@@ -758,7 +758,9 @@ def set_priority(id_):
 
         try:
             client.torrents_file_priority(
-                torrent_hash=id_, file_ids=pause, priority=0
+                torrent_hash=id_,
+                file_ids=pause,
+                priority=0,
             )
         except NotFound404Error as e:
             raise NotFound404Error from e
@@ -766,7 +768,9 @@ def set_priority(id_):
             LOGGER.error(f"{e} Errored in paused")
         try:
             client.torrents_file_priority(
-                torrent_hash=id_, file_ids=resume, priority=1
+                torrent_hash=id_,
+                file_ids=resume,
+                priority=1,
             )
         except NotFound404Error as e:
             raise NotFound404Error from e

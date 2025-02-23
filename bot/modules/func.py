@@ -792,7 +792,10 @@ async def limit_checker(
                 arch = any([listener.compress, listener.extract])
                 limit = STORAGE_THRESHOLD * 1024**3
                 acpt = await sync_to_async(
-                    check_storage_threshold, size, limit, arch
+                    check_storage_threshold,
+                    size,
+                    limit,
+                    arch,
                 )
                 if not acpt:
                     limit_exceeded = f"You must leave {get_readable_file_size(limit)} free storage.\nYour File/Folder size is {get_readable_file_size(size)}."
@@ -960,7 +963,8 @@ async def set_commands(bot):
                 BotCommand(BotCommands.ForceStartCommand[0], "Force start a task"),
                 BotCommand(BotCommands.ListCommand, "List files in Google Drive"),
                 BotCommand(
-                    BotCommands.SearchCommand, "Search files in Google Drive"
+                    BotCommands.SearchCommand,
+                    "Search files in Google Drive",
                 ),
                 BotCommand(BotCommands.UsersCommand, "Check users"),
                 BotCommand(BotCommands.AuthorizeCommand, "Authorize a user"),
@@ -1239,13 +1243,15 @@ bot.add_handler(
 )
 bot.add_handler(
     MessageHandler(
-        log, filters=command(BotCommands.LogCommand) & CustomFilters.sudo
+        log,
+        filters=command(BotCommands.LogCommand) & CustomFilters.sudo,
     ),
 )
 bot.add_handler(MessageHandler(checking_access, filters=regex(r"^pass")))
 bot.add_handler(
     MessageHandler(
-        add_to_paid_user, filters=(command("addpaid") & CustomFilters.sudo)
+        add_to_paid_user,
+        filters=(command("addpaid") & CustomFilters.sudo),
     ),
 )
 bot.add_handler(
@@ -1257,7 +1263,8 @@ bot.add_handler(
 
 bot.add_handler(
     MessageHandler(
-        add_to_good_friend, filters=(command("addgdf") & CustomFilters.sudo)
+        add_to_good_friend,
+        filters=(command("addgdf") & CustomFilters.sudo),
     ),
 )
 bot.add_handler(

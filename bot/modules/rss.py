@@ -208,7 +208,10 @@ async def getUserId(title):
 
 
 async def rssUpdate(
-    client: Client, message: Message, query: CallbackQuery, state: str
+    client: Client,
+    message: Message,
+    query: CallbackQuery,
+    state: str,
 ):
     user_id = message.from_user.id
     handler_dict[user_id] = False
@@ -460,7 +463,8 @@ async def event_handler(client: Client, query: CallbackQuery, pfunc: partial):
         )
 
     handler = client.add_handler(
-        MessageHandler(pfunc, create(event_filter)), group=-1
+        MessageHandler(pfunc, create(event_filter)),
+        group=-1,
     )
     while handler_dict[user_id]:
         await sleep(0.5)

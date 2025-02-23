@@ -198,7 +198,7 @@ class DbManager:
         if self._err:
             return
         await self._db.tasks[bot_id].insert_one(
-            {"_id": link, "cid": cid, "tag": tag}
+            {"_id": link, "cid": cid, "tag": tag},
         )
 
     async def rm_complete_task(self, link):

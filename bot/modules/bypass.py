@@ -72,7 +72,9 @@ class Bypass(TaskListener):
 
         if fmsg := await UseCheck(self.message).run(forpremi=True, session=True):
             await auto_delete_message(
-                self.message, fmsg, self.message.reply_to_message
+                self.message,
+                fmsg,
+                self.message.reply_to_message,
             )
             return
 

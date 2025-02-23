@@ -234,7 +234,8 @@ class gdSearch(GoogleDriveHelper):
                             msg += f'<span> <a class="btn btn-outline-primary btn-sm text-white" href="{url}" target="_blank"><i class="fas fa-bolt"></i> Index Link</a></span>'
                         if config_dict["VIEW_LINK"]:
                             urlv = short_url(
-                                f"{index_url}/{url_path}?a=view", user_id
+                                f"{index_url}/{url_path}?a=view",
+                                user_id,
                             )
                             if style in ["tele", "graph"]:
                                 msg += f' <b>| <a href="{urlv}">View Link</a></b>'
@@ -285,7 +286,7 @@ class gdSearch(GoogleDriveHelper):
         f_name = f"{fileName}_{time()}.html"
         with open(f_name, "w", encoding="utf-8") as f:
             f.write(
-                hmtl_content.replace("{fileName}", fileName).replace("{msg}", msg)
+                hmtl_content.replace("{fileName}", fileName).replace("{msg}", msg),
             )
         return contents_count, f_name
 

@@ -109,7 +109,7 @@ class MegaAppListener(MegaListener):
 
     def onTransferTemporaryError(self, api, transfer, error):
         LOGGER.error(
-            f"Mega download error in file {transfer.getFileName()}: {error}"
+            f"Mega download error in file {transfer.getFileName()}: {error}",
         )
         if transfer.getState() in [1, 4]:
             return

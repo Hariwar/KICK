@@ -266,7 +266,7 @@ class TaskConfig:
             if self.upDest == "rcl":
                 if self.isClone:
                     if not is_rclone_path(self.link) and not is_gdrive_link(
-                        self.link
+                        self.link,
                     ):
                         raise ValueError(
                             "You can't clone from different types of tools!",
@@ -275,7 +275,8 @@ class TaskConfig:
                 else:
                     config_path = None
                 self.upDest = await RcloneList(self).get_rclone_path(
-                    "rcu", config_path
+                    "rcu",
+                    config_path,
                 )
                 if not is_rclone_path(self.upDest):
                     raise ValueError(self.upDest)
@@ -458,7 +459,8 @@ class TaskConfig:
             b_msg.append(f"{self.bulk[0]} -i {len(self.bulk)} {self.options}")
             nextmsg = await sendMessage(" ".join(b_msg), self.message)
             nextmsg = await self.client.get_messages(
-                self.message.chat.id, nextmsg.id
+                self.message.chat.id,
+                nextmsg.id,
             )
             nextmsg.from_user = self.message.from_user
             obj(
@@ -848,7 +850,12 @@ class TaskConfig:
                 ):
                     archived.append(
                         await createArchive(
-                            self, fpath, dest_path, size, pswd, True
+                            self,
+                            fpath,
+                            dest_path,
+                            size,
+                            pswd,
+                            True,
                         ),
                     )
                 for item in glob(f"{self.newDir}/*"):

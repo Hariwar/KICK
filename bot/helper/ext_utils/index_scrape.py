@@ -17,7 +17,7 @@ async def func(payload_input, url: str, username: str, password: str):
     try:
         user_pass = f"{username}:{password}"
         headers = {
-            "authorization": f"Basic {b64encode(user_pass.encode()).decode()}"
+            "authorization": f"Basic {b64encode(user_pass.encode()).decode()}",
         }
     except:
         return "Username/password combination is wrong or invalid link!"

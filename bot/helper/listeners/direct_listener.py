@@ -51,7 +51,9 @@ class DirectListener:
             self._a2c_opt["out"] = filename
             try:
                 self.task = aria2.add_uris(
-                    [content["url"]], self._a2c_opt, position=0
+                    [content["url"]],
+                    self._a2c_opt,
+                    position=0,
                 )
             except Exception as e:
                 self._failed += 1

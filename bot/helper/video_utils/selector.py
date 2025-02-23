@@ -192,7 +192,7 @@ class SelectMode:
                     buttons.button_data("Font Style", "vidtool fontstyle", "header")
 
             if self.mode in ("compress", "watermark") or self.extra_data.get(
-                "hardsub"
+                "hardsub",
             ):
                 buttons.button_data("Quality", "vidtool quality", "header")
             if self.mode == "watermark":
@@ -364,7 +364,9 @@ async def message_handler(_, message: Message, obj: SelectMode, is_sub=False):
             )
         else:
             if message.document and "image" not in getattr(
-                media, "mime_type", "None"
+                media,
+                "mime_type",
+                "None",
             ):
                 await sendMessage("Only image document allowed!", message)
                 return
