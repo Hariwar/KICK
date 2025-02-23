@@ -1,7 +1,9 @@
 name: Deploy to Heroku
-
+  
+      with:
+    fetch-depth: 0 
 on:
-  workflow_dispatch:
+  workflow_dispatch: 
     inputs:
       HEROKU_APP_NAME:
         description: "Heroku App name"
@@ -37,7 +39,7 @@ jobs:
     steps:
       - name: Checkout deploy branch
         uses: actions/checkout@v2
-
+    
       - name: Delete unnecessary directories and files
         run: |
           # Directories to delete
@@ -58,6 +60,12 @@ jobs:
             echo "File not found: aria.sh"
           fi
 
+    
+     - name: Checkout Repository
+       uses: actions/checkout@v4
+      with:
+    fetch-depth: 0 
+    
       - name: Deploy to Heroku
         uses: 5hojib/heroku-deploy-action@v2
         with:
