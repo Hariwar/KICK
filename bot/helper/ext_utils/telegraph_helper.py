@@ -1,11 +1,12 @@
 from asyncio import sleep
-from html_telegraph_poster import TelegraphPoster, upload_image
 from random import SystemRandom
 from string import ascii_letters
+
+from html_telegraph_poster import TelegraphPoster, upload_image
 from telegraph.aio import Telegraph
 from telegraph.exceptions import RetryAfterError
 
-from bot import config_dict, LOGGER
+from bot import LOGGER, config_dict
 
 
 class TelegraphHelper:
@@ -80,7 +81,6 @@ class TelegraphHelper:
                 title=config_dict["TSEARCH_TITLE"],
                 content=content,
             )
-        return
 
 
 class TelePost:
@@ -90,7 +90,8 @@ class TelePost:
     def _create_telegraph(self):
         try:
             tele = TelegraphPoster(
-                use_api=True, telegraph_api_url="https://api.graph.org"
+                use_api=True,
+                telegraph_api_url="https://api.graph.org",
             )
             tele.create_api_token("Telegraph")
             page = tele.post(

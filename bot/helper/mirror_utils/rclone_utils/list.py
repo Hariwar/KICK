@@ -1,27 +1,36 @@
 from __future__ import annotations
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath
-from asyncio import wait_for, Event, wrap_future, gather
+
+from asyncio import Event, gather, wait_for, wrap_future
 from configparser import ConfigParser
 from functools import partial
 from json import loads
+from time import time
+from typing import TYPE_CHECKING
+
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
 from pyrogram.filters import regex, user
 from pyrogram.handlers import CallbackQueryHandler
-from pyrogram.types import CallbackQuery
-from time import time
 
-from bot import config_dict, LOGGER
+from bot import LOGGER, config_dict
 from bot.helper.ext_utils.bot_utils import (
     cmd_exec,
-    new_thread,
     new_task,
+    new_thread,
     update_user_ldata,
 )
-from bot.helper.ext_utils.status_utils import get_readable_time, get_readable_file_size
-from bot.helper.listeners import tasks_listener as task
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.message_utils import editMessage
+
+if TYPE_CHECKING:
+    from pyrogram.types import CallbackQuery
+
+    from bot.helper.listeners import tasks_listener as task
 
 LIST_LIMIT = 6
 
@@ -53,7 +62,8 @@ class RcloneList:
         pfunc = partial(path_updates, obj=self)
         handler = self.listener.client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^rcq") & user(self.listener.user_id)
+                pfunc,
+                filters=regex("^rcq") & user(self.listener.user_id),
             ),
             group=-1,
         )
@@ -77,7 +87,7 @@ class RcloneList:
         page = (self.iter_start / LIST_LIMIT) + 1 if self.iter_start != 0 else 1
         buttons = ButtonMaker()
         for index, idict in enumerate(
-            self.path_list[self.iter_start : LIST_LIMIT + self.iter_start]
+            self.path_list[self.iter_start : LIST_LIMIT + self.iter_start],
         ):
             orig_index = index + self.iter_start
             if idict["IsDir"]:
@@ -101,19 +111,22 @@ class RcloneList:
             buttons.button_data("This Path", "rcq cur", "footer")
         if self.list_status == "rcu":
             buttons.button_data("Set as Default", "rcq def", position="footer")
-        if self.path or len(self._sections) > 1 or self._rc_user and self._rc_owner:
+        if (
+            self.path
+            or len(self._sections) > 1
+            or (self._rc_user and self._rc_owner)
+        ):
             buttons.button_data("<<", "rcq back pa", "footer")
         if self.path:
             buttons.button_data("Root", "rcq root", "footer")
         buttons.button_data("Cancel", "rcq cancel", "footer")
         msg = "<b>Choose Path:</b>\n"
         if items_no > LIST_LIMIT:
-            msg += (
-                f"Page: <b>{int(page)}/{pages}</b> | Steps: <b>{self.page_step}</b>\n\n"
-            )
+            msg += f"Page: <b>{int(page)}/{pages}</b> | Steps: <b>{self.page_step}</b>\n\n"
         if self.list_status == "rcu":
             default_path = (
-                self.listener.user_dict.get("rclone_path") or config_dict["RCLONE_PATH"]
+                self.listener.user_dict.get("rclone_path")
+                or config_dict["RCLONE_PATH"]
             )
             msg += f"Default Path: {default_path}\n" if default_path else ""
         msg += (
@@ -144,7 +157,7 @@ class RcloneList:
             f"{self.remote}{self.path}",
         ]
         if self.is_cancelled:
-            return
+            return None
         res, err, code = await cmd_exec(cmd)
         if code not in [0, -9]:
             LOGGER.error(
@@ -156,10 +169,14 @@ class RcloneList:
             self.remote = err
             self.path = ""
             self.event.set()
-            return
+            return None
         self.processing = False
         result = loads(res)
-        if len(result) == 0 and itype != self.item_type and self.list_status == "rcd":
+        if (
+            len(result) == 0
+            and itype != self.item_type
+            and self.list_status == "rcd"
+        ):
             itype = (
                 "--dirs-only" if self.item_type == "--files-only" else "--files-only"
             )
@@ -168,10 +185,11 @@ class RcloneList:
         self.path_list = sorted(result, key=lambda x: x["Path"])
         self.iter_start = 0
         await self.get_path_buttons()
+        return None
 
     async def list_remotes(self):
         config = ConfigParser()
-        async with aiopen(self.config_path, "r") as f:
+        async with aiopen(self.config_path) as f:
             contents = await f.read()
             config.read_string(contents)
         if config.has_section("combine"):
@@ -210,7 +228,9 @@ class RcloneList:
             buttons.button_data("Cancel", "rcq cancel")
             await editMessage(msg, self.listener.editable, buttons.build_menu(2))
         else:
-            self.config_path = "rclone.conf" if self._rc_owner else self.user_rcc_path
+            self.config_path = (
+                "rclone.conf" if self._rc_owner else self.user_rcc_path
+            )
             await self.list_remotes()
 
     async def back_from_path(self):
@@ -231,7 +251,8 @@ class RcloneList:
             await self.list_remotes()
         else:
             self._rc_user, self._rc_owner = await gather(
-                aiopath.exists(self.user_rcc_path), aiopath.exists("rclone.conf")
+                aiopath.exists(self.user_rcc_path),
+                aiopath.exists("rclone.conf"),
             )
             if not self._rc_owner and not self._rc_user:
                 self.event.set()
@@ -303,8 +324,10 @@ async def path_updates(_, query: CallbackQuery, obj: RcloneList):
             obj.event.set()
         case "def":
             path = f"{obj.remote}{obj.path}"
-            if (is_rcbot := obj.config_path == "rclone.conf") and not path.startswith(
-                config_dict["RCLONE_PATH"]
+            if (
+                is_rcbot := obj.config_path == "rclone.conf"
+            ) and not path.startswith(
+                config_dict["RCLONE_PATH"],
             ):
                 await query.answer(
                     f"Set default for bot rclone only to {config_dict['RCLONE_PATH']}!",

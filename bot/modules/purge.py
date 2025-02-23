@@ -1,9 +1,10 @@
 from asyncio import gather
+from time import time
+
 from pyrogram import Client
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
-from time import time
 
 from bot import bot
 from bot.helper.ext_utils.bot_utils import new_task
@@ -11,10 +12,10 @@ from bot.helper.ext_utils.status_utils import get_readable_time
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
     deleteMessage,
+    editMessage,
     handle_message,
+    sendMessage,
 )
 
 
@@ -42,6 +43,7 @@ async def purge_message(client: Client, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        purge_message, filters=command(BotCommands.PurgeCommand) & CustomFilters.owner
-    )
+        purge_message,
+        filters=command(BotCommands.PurgeCommand) & CustomFilters.owner,
+    ),
 )

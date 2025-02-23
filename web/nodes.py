@@ -1,6 +1,7 @@
-from anytree import NodeMixin
-from re import findall as re_findall
 from os import environ
+from re import findall as re_findall
+
+from anytree import NodeMixin
 
 DOWNLOAD_DIR = environ.get("DOWNLOAD_DIR", "")
 if len(DOWNLOAD_DIR) == 0:
@@ -61,7 +62,9 @@ def make_tree(res, aria2=False):
                     )
                     if current_node is None:
                         previous_node = TorNode(
-                            folders[j], parent=previous_node, is_folder=True
+                            folders[j],
+                            parent=previous_node,
+                            is_folder=True,
                         )
                     else:
                         previous_node = current_node
@@ -99,7 +102,9 @@ def make_tree(res, aria2=False):
                     )
                     if current_node is None:
                         previous_node = TorNode(
-                            folders[j], parent=previous_node, is_folder=True
+                            folders[j],
+                            parent=previous_node,
+                            is_folder=True,
                         )
                     else:
                         previous_node = current_node
@@ -111,7 +116,8 @@ def make_tree(res, aria2=False):
                     priority=priority,
                     file_id=i["index"],
                     progress=round(
-                        (int(i["completedLength"]) / int(i["length"])) * 100, 5
+                        (int(i["completedLength"]) / int(i["length"])) * 100,
+                        5,
                     ),
                 )
             else:
@@ -123,7 +129,8 @@ def make_tree(res, aria2=False):
                     priority=priority,
                     file_id=i["index"],
                     progress=round(
-                        (int(i["completedLength"]) / int(i["length"])) * 100, 5
+                        (int(i["completedLength"]) / int(i["length"])) * 100,
+                        5,
                     ),
                 )
     return create_list(parent, ["", 0])
@@ -160,7 +167,9 @@ def create_list(par, msg):
                 msg[0] += (
                     f'<input type="checkbox" checked name="filenode_{i.file_id}" data-size="{i.size}"> <label data-size="{i.size}" for="filenode_{i.file_id}">{i.name}</label> / {i.progress}%'
                 )
-            msg[0] += f'<input type="hidden" value="off" name="filenode_{i.file_id}">'
+            msg[0] += (
+                f'<input type="hidden" value="off" name="filenode_{i.file_id}">'
+            )
             msg[0] += "</li>"
 
     if par.name != ".unwanted":

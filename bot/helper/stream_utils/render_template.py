@@ -1,13 +1,17 @@
-from aiofiles import open as aiopen
-from aiohttp import ClientSession
 from os import path as ospath
 from time import time
 from urllib.parse import urljoin
 
-from bot import config_dict, botStartTime, LOGGER
-from bot.helper.ext_utils.exceptions import InvalidHash, FIleNotFound
+from aiofiles import open as aiopen
+from aiohttp import ClientSession
+
+from bot import LOGGER, botStartTime, config_dict
+from bot.helper.ext_utils.exceptions import FIleNotFound, InvalidHash
 from bot.helper.ext_utils.links_utils import get_url_name, is_url
-from bot.helper.ext_utils.status_utils import get_readable_file_size, get_readable_time
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
 from bot.helper.stream_utils.file_properties import get_file_ids
 
 
@@ -19,23 +23,32 @@ async def render_page(message_id, secure_hash, is_home=False, ddl=""):
             f"<h1 style='text-align: center'><a href='https://t.me/{channel}'>@{channel}</a></h1><br>"
             f"<h2 style='text-align: center'>Up Time: {get_readable_time(time() - botStartTime)}</h2>"
         )
-        async with aiopen(ospath.join(tpath, "home.html"), "r") as f:
+        async with aiopen(ospath.join(tpath, "home.html")) as f:
             html = (await f.read()).replace("<!-- Print -->", info)
     else:
         if ddl:
             file_data = type(
                 "file_id",
                 (object,),
-                {"file_name": get_url_name(ddl), "mime_type": secure_hash or "video"},
+                {
+                    "file_name": get_url_name(ddl),
+                    "mime_type": secure_hash or "video",
+                },
             )
-            src = ddl if is_url(ddl) else urljoin(config_dict["RCLONE_SERVE_URL"], ddl)
+            src = (
+                ddl if is_url(ddl) else urljoin(config_dict["RCLONE_SERVE_URL"], ddl)
+            )
         else:
             file_data = await get_file_ids(int(message_id))
             if file_data.unique_id[:6] != secure_hash:
-                LOGGER.info("Link hash: %s - %s", secure_hash, file_data.unique_id[:6])
+                LOGGER.info(
+                    "Link hash: %s - %s", secure_hash, file_data.unique_id[:6]
+                )
                 LOGGER.info("Invalid hash for message with - ID %s", message_id)
                 raise InvalidHash
-            src = urljoin(config_dict["STREAM_BASE_URL"], f"{secure_hash}{message_id}")
+            src = urljoin(
+                config_dict["STREAM_BASE_URL"], f"{secure_hash}{message_id}"
+            )
 
         filename = file_data.file_name
         match file_data.mime_type.split("/")[0].strip():
@@ -65,7 +78,7 @@ async def render_page(message_id, secure_hash, is_home=False, ddl=""):
                 ):
                     heading = f"Download: {filename}"
                     file_size = get_readable_file_size(
-                        int(u.headers.get("Content-Length"))
+                        int(u.headers.get("Content-Length")),
                     )
                     html = (await r.read()) % (heading, filename, src, file_size)
     return html

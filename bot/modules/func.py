@@ -1,76 +1,70 @@
 #!/usr/bin/env python3
+import contextlib
 import json
-from uuid import uuid4
-from time import sleep, time
-from base64 import b64encode
-from pyrogram import filters
-from shutil import disk_usage
-from urllib.parse import quote
-from pymongo import MongoClient
-from shlex import split as ssplit
+from asyncio import create_subprocess_exec
 from asyncio.subprocess import PIPE
-from aiofiles import open as aiopen
-from urllib3 import disable_warnings
+from base64 import b64encode
+from os import (
+    path as ospath,
+)
+from os import (
+    replace as osreplace,
+)
+from random import choice, random, randrange
+from shutil import disk_usage
+from time import sleep, time
+from urllib.parse import quote
+from uuid import uuid4
+
 from aiofiles.os import path as aiopath
 from cloudscraper import create_scraper
-from asyncio import create_subprocess_exec
-from pyrogram.filters import regex, command
-from pyrogram.handlers import MessageHandler
-from random import choice, random, randrange
-from pyrogram.types import BotCommand, CallbackQuery
-from re import findall as refindall, search as re_search
-from subprocess import run as srun, check_output as scheck_output
-from aiofiles.os import remove as aioremove, path as aiopath, mkdir
-from os import (
-    remove as osremove,
-    rename as osrename,
-    path as ospath,
-    replace as osreplace,
-    getcwd,
-)
-from pyrogram.errors import PeerIdInvalid, RPCError, UserNotParticipant, FloodWait
 from psutil import (
-    disk_usage,
-    cpu_percent,
-    swap_memory,
-    cpu_count,
-    virtual_memory,
-    net_io_counters,
     boot_time,
+    cpu_count,
+    cpu_percent,
+    disk_usage,
+    net_io_counters,
+    swap_memory,
+    virtual_memory,
 )
+from pymongo import MongoClient
+from pyrogram.errors import FloodWait, PeerIdInvalid, RPCError, UserNotParticipant
+from pyrogram.filters import command, regex
+from pyrogram.handlers import MessageHandler
+from pyrogram.types import BotCommand
+from urllib3 import disable_warnings
 
 from bot import (
-    bot,
-    botStartTime,
-    config_dict,
-    task_dict_lock,
-    task_dict,
     DATABASE_URL,
     DOWNLOAD_DIR,
     GLOBAL_BLACKLIST_FILE_KEYWORDS,
     LOGGER,
     OWNER_ID,
+    bot,
+    botStartTime,
+    config_dict,
     shorteneres_list,
+    task_dict,
+    task_dict_lock,
     user_data,
 )
-from bot.helper.ext_utils.db_handler import DbManager
-from bot.helper.ext_utils.files_utils import get_base_name
-from bot.helper.ext_utils.telegraph_helper import telegraph
-from bot.helper.telegram_helper.message_utils import get_tg_link_message
-from bot.helper.ext_utils.links_utils import is_gdrive_id, is_telegram_link
 from bot.helper.ext_utils.bot_utils import (
     cmd_exec,
-    sync_to_async,
     get_telegraph_list,
-    new_task,
+    sync_to_async,
+    update_user_ldata,
 )
-from bot.helper.ext_utils.status_utils import get_readable_file_size, get_readable_time
-from bot.helper.telegram_helper.filters import CustomFilters
-from bot.helper.ext_utils.bot_utils import update_user_ldata
+from bot.helper.ext_utils.db_handler import DbManager
+from bot.helper.ext_utils.links_utils import is_telegram_link
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
+from bot.helper.mirror_leech_utils.gdrive_utils.search import gdSearch
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
-from bot.helper.telegram_helper.message_utils import editMessage, sendMessage
-from bot.helper.mirror_leech_utils.gdrive_utils.search import gdSearch
+from bot.helper.telegram_helper.filters import CustomFilters
+from bot.helper.telegram_helper.message_utils import get_tg_link_message, sendMessage
 
 leech_data = {}
 bot_name = bot.me.username
@@ -87,7 +81,7 @@ async def edit_video_metadata(user_id, file_path):
         return
 
     file_name = ospath.basename(file_path)
-    temp_ffile_name = ospath.basename(file_path)
+    ospath.basename(file_path)
     directory = ospath.dirname(file_path)
     temp_file = f"{file_name}.temp.mkv"
     temp_file_path = ospath.join(directory, temp_file)
@@ -196,14 +190,14 @@ async def edit_video_metadata(user_id, file_path):
                     f"0:{stream_index}",
                     f"-metadata:s:a:{audio_index}",
                     f"title={metadata_text}",
-                ]
+                ],
             )
             audio_index += 1
         elif stream_type == "subtitle":
             codec_name = stream.get("codec_name", "unknown")
             if codec_name in ["webvtt", "unknown"]:
                 print(
-                    f"Skipping unsupported subtitle metadata modification: {codec_name} for stream {stream_index}"
+                    f"Skipping unsupported subtitle metadata modification: {codec_name} for stream {stream_index}",
                 )
             else:
                 cmd.extend(
@@ -212,7 +206,7 @@ async def edit_video_metadata(user_id, file_path):
                         f"0:{stream_index}",
                         f"-metadata:s:s:{subtitle_index}",
                         f"title={metadata_text}",
-                    ]
+                    ],
                 )
                 subtitle_index += 1
         else:
@@ -247,17 +241,16 @@ async def check_filename(message, file_name=None, link=None):
     if link is not None:
         owner_msg += f"<b>Link:</b> {link}\n\n"
     owner_msg += f"<b>User ID:</b> <code>{message.from_user.id}</code>\n"
-    owner_msg += (
-        f"<b>User:</b> {tag}\n\n<b>This user is trying to download blacklist file.</b>"
-    )
+    owner_msg += f"<b>User:</b> {tag}\n\n<b>This user is trying to download blacklist file.</b>"
     if file_name is not None:
         if any(
             filter_word in file_name.lower()
             for filter_word in GLOBAL_BLACKLIST_FILE_KEYWORDS
         ):
             await bot.send_message(chat_id=OWNER_ID, text=owner_msg)
-            msg = f"A Blacklist keyword found in your file/link.You can not download this file/link."
-            return msg
+            return "A Blacklist keyword found in your file/link.You can not download this file/link."
+        return None
+    return None
 
 
 async def getDownloadByGid(gid):
@@ -308,7 +301,7 @@ async def update_leech_links(name, from_chat_id, message_id):
                     "link": link,
                     "from_chat_id": from_chat_id,
                     "message_id": message_id,
-                }
+                },
             },
             upsert=True,
         )
@@ -317,23 +310,27 @@ async def update_leech_links(name, from_chat_id, message_id):
 
 
 async def copy_message(chat_id, from_chat_id, message_id):
-    try:
+    with contextlib.suppress(Exception):
         await bot.copy_message(
-            chat_id=chat_id, from_chat_id=from_chat_id, message_id=message_id
+            chat_id=chat_id,
+            from_chat_id=from_chat_id,
+            message_id=message_id,
         )
-    except:
-        pass
 
 
 async def get_bot_pm_button():
     buttons = ButtonMaker()
     buttons.ubutton("View in inbox", f"https://t.me/{bot_name}")
-    button = buttons.build_menu(1)
-    return button
+    return buttons.build_menu(1)
 
 
 async def send_to_chat(
-    chat_id=None, message=None, text=None, buttons=None, reply=False, photo=False
+    chat_id=None,
+    message=None,
+    text=None,
+    buttons=None,
+    reply=False,
+    photo=False,
 ):
     if chat_id and not reply:
         try:
@@ -343,8 +340,7 @@ async def send_to_chat(
             else:
                 await bot.send_message(chat_id, text, reply_markup=buttons)
         except Exception as e:
-            print(f"An error occurred: {str(e)}")
-            pass
+            print(f"An error occurred: {e!s}")
     else:
         try:
             if photo and config_dict["IMAGES"]:
@@ -355,14 +351,13 @@ async def send_to_chat(
                     reply_to_message_id=message.id,
                     reply_markup=buttons,
                 )
-            else:
-                return await message.reply(
-                    text=text,
-                    quote=True,
-                    disable_web_page_preview=True,
-                    disable_notification=True,
-                    reply_markup=buttons,
-                )
+            return await message.reply(
+                text=text,
+                quote=True,
+                disable_web_page_preview=True,
+                disable_notification=True,
+                reply_markup=buttons,
+            )
         except FloodWait as f:
             LOGGER.warning(str(f))
             if block:
@@ -383,13 +378,13 @@ async def send_to_chat(
 async def stop_duplicate_leech(name, size, listener):
     LOGGER.info(f"Checking Duplicate Leech for: {name}")
     if not listener.isLeech:
-        return
+        return None
 
     if listener.compress:
         name = f"{name}.zip"
     message = listener.message
     user_id = message.from_user.id
-    tag = await get_tag(message)
+    await get_tag(message)
     leech_dict = leech_data.get(name, {})
     if (
         leech_dict.get("link")
@@ -405,7 +400,7 @@ async def stop_duplicate_leech(name, size, listener):
                 reply_to, session = await get_tg_link_message(link)
             except Exception as e:
                 print({e})
-                return
+                return None
             if reply_to:
                 file_ = (
                     reply_to.document
@@ -419,28 +414,27 @@ async def stop_duplicate_leech(name, size, listener):
                     or None
                 )
                 if file_:
-                    file_name = file_.file_name
                     file_size = file_.file_size
                     if size == file_size:
                         if (
                             config_dict["BOT_PM"]
                             and message.chat.type != message.chat.type.PRIVATE
                         ):
-                            msg = f"File already available in Leech Dump Chat.\nI have sent available file in pm."
+                            msg = "File already available in Leech Dump Chat.\nI have sent available file in pm."
                             await bot.copy_message(
                                 chat_id=user_id,
                                 from_chat_id=from_chat_id,
                                 message_id=message_id,
                             )
                         else:
-                            msg = f"File already available in Leech Dump Chat.\nI have forwarded the file here."
+                            msg = "File already available in Leech Dump Chat.\nI have forwarded the file here."
                             await bot.copy_message(
                                 chat_id=message.chat.id,
                                 from_chat_id=from_chat_id,
                                 message_id=message_id,
                             )
                         return msg
-    return
+    return None
 
 
 async def user_info(user_id):
@@ -453,6 +447,7 @@ async def user_info(user_id):
 async def get_user_tasks(user_id, maxtask):
     if tasks := await getAllDownload("all", user_id):
         return len(tasks) >= maxtask
+    return None
 
 
 async def delete_links(message):
@@ -478,11 +473,14 @@ async def check_duplicate_file(self, up_name):
     message = self.message
     user_id = message.from_user.id
     telegraph_content, contents_no = await sync_to_async(
-        gdSearch(stopDup=True).drive_list, up_name, self.upDest, self.user_id
+        gdSearch(stopDup=True).drive_list,
+        up_name,
+        self.upDest,
+        self.user_id,
     )
     if telegraph_content:
         if config_dict["BOT_PM"] and message.chat.type != message.chat.type.PRIVATE:
-            msg = f"\nFile/Folder is already available in Drive.\nI have sent available file link in pm."
+            msg = "\nFile/Folder is already available in Drive.\nI have sent available file link in pm."
             pmmsg = f"Hey {self.tag}.\n\nFile/Folder is already available in Drive.\nHere are {contents_no} list results:"
             pmbutton = await get_telegraph_list(telegraph_content)
             button = await get_bot_pm_button()
@@ -510,9 +508,12 @@ def short_url(longurl, attempt=0):
             headers = {"public-api-token": _shortener_api}
             data = {"urlToShorten": quote(longurl)}
             return cget(
-                "PUT", "https://api.shorte.st/v1/data/url", headers=headers, data=data
+                "PUT",
+                "https://api.shorte.st/v1/data/url",
+                headers=headers,
+                data=data,
             ).json()["shortenedUrl"]
-        elif "linkvertise" in _shortener:
+        if "linkvertise" in _shortener:
             url = quote(b64encode(longurl.encode("utf-8")))
             linkvertise = [
                 f"https://link-to.net/{_shortener_api}/{random() * 1000}/dynamic?r={url}",
@@ -521,7 +522,7 @@ def short_url(longurl, attempt=0):
                 f"https://file-link.net/{_shortener_api}/{random() * 1000}/dynamic?r={url}",
             ]
             return choice(linkvertise)
-        elif "bitly.com" in _shortener:
+        if "bitly.com" in _shortener:
             headers = {"Authorization": f"Bearer {_shortener_api}"}
             return cget(
                 "POST",
@@ -529,35 +530,37 @@ def short_url(longurl, attempt=0):
                 json={"long_url": longurl},
                 headers=headers,
             ).json()["link"]
-        elif "ouo.io" in _shortener:
+        if "ouo.io" in _shortener:
             return cget(
-                "GET", f"http://ouo.io/api/{_shortener_api}?s={longurl}", verify=False
+                "GET",
+                f"http://ouo.io/api/{_shortener_api}?s={longurl}",
+                verify=False,
             ).text
-        elif "cutt.ly" in _shortener:
+        if "cutt.ly" in _shortener:
             return cget(
                 "GET",
                 f"http://cutt.ly/api/api.php?key={_shortener_api}&short={longurl}",
                 verify=False,
             ).json()["url"]["shortLink"]
-        else:
+        res = cget(
+            "GET",
+            f"https://{_shortener}/api?api={_shortener_api}&url={quote(longurl)}",
+        ).json()
+        shorted = res["shortenedUrl"]
+        if not shorted:
+            shrtco_res = cget(
+                "GET",
+                f"https://api.shrtco.de/v2/shorten?url={quote(longurl)}",
+            ).json()
+            shrtco_link = shrtco_res["result"]["full_short_link"]
             res = cget(
                 "GET",
-                f"https://{_shortener}/api?api={_shortener_api}&url={quote(longurl)}",
+                f"https://{_shortener}/api?api={_shortener_api}&url={shrtco_link}",
             ).json()
             shorted = res["shortenedUrl"]
-            if not shorted:
-                shrtco_res = cget(
-                    "GET", f"https://api.shrtco.de/v2/shorten?url={quote(longurl)}"
-                ).json()
-                shrtco_link = shrtco_res["result"]["full_short_link"]
-                res = cget(
-                    "GET",
-                    f"https://{_shortener}/api?api={_shortener_api}&url={shrtco_link}",
-                ).json()
-                shorted = res["shortenedUrl"]
-            if not shorted:
-                shorted = longurl
-            return shorted
+        if not shorted:
+            shorted = longurl
+        return shorted
     except Exception as e:
         LOGGER.error(e)
         sleep(1)
@@ -566,12 +569,12 @@ def short_url(longurl, attempt=0):
 
 
 def checking_blacklist(message, button=None):
-    LOGGER.info(f"Checking blacklis status")
+    LOGGER.info("Checking blacklis status")
     user_id = message.from_user.id
     if user_id in user_data and user_data[user_id].get("is_blacklist"):
         b_msg = f"<b>You are blacklisted ⚠️.</b>\n\n<b>User Id:</b> <code>{user_id}</code>.\n\n"
-        b_msg += f"<b>Possible Reasons:</b>\n<b>1:</b> Mirror or Leech P*r*n Video.\n<b>2:</b> Mirror or Leech illegal files.\n\n"
-        b_msg += f"Contact with bot owner to remove yourself from blacklist."
+        b_msg += "<b>Possible Reasons:</b>\n<b>1:</b> Mirror or Leech P*r*n Video.\n<b>2:</b> Mirror or Leech illegal files.\n\n"
+        b_msg += "Contact with bot owner to remove yourself from blacklist."
         return b_msg, button
     return None, button
 
@@ -580,21 +583,16 @@ async def checking_token_status(message, button=None):
     user_id = message.from_user.id
     if not config_dict["TOKEN_TIMEOUT"] or bool(
         user_id == OWNER_ID
-        or user_id in user_data
-        and user_data[user_id].get("is_sudo")
-        or user_id in user_data
-        and user_data[user_id].get("is_good_friend")
-        or user_id in user_data
-        and user_data[user_id].get("is_paid_user")
+        or (user_id in user_data and user_data[user_id].get("is_sudo"))
+        or (user_id in user_data and user_data[user_id].get("is_good_friend"))
+        or (user_id in user_data and user_data[user_id].get("is_paid_user")),
     ):
         return None, button
     user_data.setdefault(user_id, {})
     data = user_data[user_id]
     expire = data.get("time")
-    isExpired = (
-        expire is None
-        or expire is not None
-        and (time() - expire) > config_dict["TOKEN_TIMEOUT"]
+    isExpired = expire is None or (
+        expire is not None and (time() - expire) > config_dict["TOKEN_TIMEOUT"]
     )
     if isExpired:
         token = data["token"] if expire is None and "token" in data else str(uuid4())
@@ -618,11 +616,8 @@ async def checking_token_status(message, button=None):
 def check_storage_threshold(size, threshold, arch=False, alloc=False):
     free = disk_usage(DOWNLOAD_DIR).free
     if not alloc:
-        if (
-            not arch
-            and free - size < threshold
-            or arch
-            and free - (size * 2) < threshold
+        if (not arch and free - size < threshold) or (
+            arch and free - (size * 2) < threshold
         ):
             return False
     elif not arch:
@@ -682,6 +677,7 @@ async def command_listener(
     if msg:
         await delete_links(message)
         return await message.reply(msg)
+    return None
 
 
 @bot.on_callback_query(regex("limits_callback"))
@@ -705,10 +701,8 @@ async def checking_access(user_id, button=None):
     if DATABASE_URL:
         data["time"] = await DbManager().get_token_expire_time(user_id)
     expire = data.get("time")
-    isExpired = (
-        expire is None
-        or expire is not None
-        and (time() - expire) > config_dict["TOKEN_TIMEOUT"]
+    isExpired = expire is None or (
+        expire is not None and (time() - expire) > config_dict["TOKEN_TIMEOUT"]
     )
     if isExpired:
         token = data["token"] if expire is None and "token" in data else str(uuid4())
@@ -721,7 +715,8 @@ async def checking_access(user_id, button=None):
         if button is None:
             button = ButtonMaker()
         button.ubutton(
-            "Get New Token", short_url(f"https://telegram.me/{bot_name}?start={token}")
+            "Get New Token",
+            short_url(f"https://telegram.me/{bot_name}?start={token}"),
         )
         tmsg = "Your <b>Token</b> is expired. Get a new one."
         tmsg += f"\n<b>Token Validity</b>: {get_readable_time(config_dict['TOKEN_TIMEOUT'])}"
@@ -739,23 +734,18 @@ async def limit_checker(
     isTorrent=False,
     isYtdlp=False,
 ):
-    LOGGER.info(f"✅ Checking file size limit")
+    LOGGER.info("✅ Checking file size limit")
     buttons = ButtonMaker()
     buttons.ibutton("See All Limits", "limits_callback")
     button = buttons.build_menu(1)
-    if isClone:
-        message = message
-    else:
-        message = listener.message
+    message = message if isClone else listener.message
     user_id = message.from_user.id
     tag = await get_tag(message)
 
     if (
         user_id == OWNER_ID
-        or user_id in user_data
-        and user_data[user_id].get("is_sudo")
-        or user_id in user_data
-        and user_data[user_id].get("is_paid_user")
+        or (user_id in user_data and user_data[user_id].get("is_sudo"))
+        or (user_id in user_data and user_data[user_id].get("is_paid_user"))
     ):
         return None, None
 
@@ -801,14 +791,15 @@ async def limit_checker(
             if STORAGE_THRESHOLD := config_dict["STORAGE_THRESHOLD"]:
                 arch = any([listener.compress, listener.extract])
                 limit = STORAGE_THRESHOLD * 1024**3
-                acpt = await sync_to_async(check_storage_threshold, size, limit, arch)
+                acpt = await sync_to_async(
+                    check_storage_threshold, size, limit, arch
+                )
                 if not acpt:
                     limit_exceeded = f"You must leave {get_readable_file_size(limit)} free storage.\nYour File/Folder size is {get_readable_file_size(size)}."
 
     if limit_exceeded:
         return limit_exceeded, button
-    else:
-        return None, None
+    return None, None
 
 
 async def chat_info(channel_id):
@@ -819,8 +810,7 @@ async def chat_info(channel_id):
     else:
         return None
     try:
-        chat = await bot.get_chat(channel_id)
-        return chat
+        return await bot.get_chat(channel_id)
     except PeerIdInvalid as e:
         LOGGER.error(f"{e.NAME}: {e.MESSAGE} for {channel_id}")
         return None
@@ -830,11 +820,8 @@ async def forcesub(message, ids, button=None):
     join_button = {}
     _msg = ""
     user_id = message.from_user.id
-    if (
-        user_id in user_data
-        and user_data[user_id].get("is_good_friend")
-        or user_id in user_data
-        and user_data[user_id].get("is_paid_user")
+    if (user_id in user_data and user_data[user_id].get("is_good_friend")) or (
+        user_id in user_data and user_data[user_id].get("is_paid_user")
     ):
         return None, button
     for channel_id in ids.split():
@@ -863,16 +850,19 @@ async def forcesub(message, ids, button=None):
 async def BotPm_check(message, button=None):
     try:
         temp_msg = await message._client.send_message(
-            chat_id=message.from_user.id, text="<b>Checking Access...</b>"
+            chat_id=message.from_user.id,
+            text="<b>Checking Access...</b>",
         )
         await temp_msg.delete()
         return None, button
-    except Exception as e:
+    except Exception:
         if button is None:
             button = ButtonMaker()
         _msg = "You didn't START the bot in PM (Private)."
         button.ubutton(
-            "Start Bot Now", f"https://t.me/{bot_name}?start=start", "header"
+            "Start Bot Now",
+            f"https://t.me/{bot_name}?start=start",
+            "header",
         )
         return _msg, button
 
@@ -892,21 +882,24 @@ async def task_utils(message):
         (token_msg, button) = await checking_access(message.from_user.id, button)
         if token_msg is not None:
             msg.append(token_msg)
-    if config_dict["BOT_PM"]:
-        if user.status == user.status.LONG_AGO:
-            _msg, button = await BotPm_check(message, button)
-            if _msg:
-                msg.append(_msg)
+    if config_dict["BOT_PM"] and user.status == user.status.LONG_AGO:
+        _msg, button = await BotPm_check(message, button)
+        if _msg:
+            msg.append(_msg)
     if ids := config_dict["FSUB_IDS"]:
         _msg, button = await forcesub(message, ids, button)
         if _msg:
             msg.append(_msg)
-    if config_dict["BOT_MAX_TASKS"] and len(task_dict) >= config_dict["BOT_MAX_TASKS"]:
+    if (
+        config_dict["BOT_MAX_TASKS"]
+        and len(task_dict) >= config_dict["BOT_MAX_TASKS"]
+    ):
         msg.append(
-            f"Bot Max Tasks limit exceeded.\nBot max tasks limit is {config_dict['BOT_MAX_TASKS']}.\nPlease wait for the completion of other tasks."
+            f"Bot Max Tasks limit exceeded.\nBot max tasks limit is {config_dict['BOT_MAX_TASKS']}.\nPlease wait for the completion of other tasks.",
         )
     if (maxtask := config_dict["USER_MAX_TASKS"]) and await get_user_tasks(
-        message.from_user.id, maxtask
+        message.from_user.id,
+        maxtask,
     ):
         if (
             config_dict["PAID_SERVICE"]
@@ -916,16 +909,16 @@ async def task_utils(message):
             pass
         else:
             msg.append(
-                f"User tasks limit is {maxtask}.\nPlease wait for the completion of your old tasks."
+                f"User tasks limit is {maxtask}.\nPlease wait for the completion of your old tasks.",
             )
     return msg, button
 
 
 @bot.on_callback_query(regex("no_drive_link"))
 async def callback_handler(client, CallbackQuery):
-    msg = f"Drive link is hidden for all user.\n"
-    msg += f"Download from index link if available.\n"
-    msg += f"You will get same speed from index link like google drive."
+    msg = "Drive link is hidden for all user.\n"
+    msg += "Download from index link if available.\n"
+    msg += "You will get same speed from index link like google drive."
     await CallbackQuery.answer(text=msg, show_alert=True)
 
 
@@ -933,7 +926,10 @@ async def get_drive_link_button(message, link):
     buttons = ButtonMaker()
     if config_dict["DISABLE_DRIVE_LINK"]:
         if message.from_user.id == OWNER_ID:
-            if config_dict["BOT_PM"] or message.chat.type == message.chat.type.PRIVATE:
+            if (
+                config_dict["BOT_PM"]
+                or message.chat.type == message.chat.type.PRIVATE
+            ):
                 buttons.ubutton("☁️ Drive Link", link)
         else:
             buttons.ibutton("🚫 Drive Link", "no_drive_link")
@@ -963,7 +959,9 @@ async def set_commands(bot):
                 BotCommand(BotCommands.DeleteCommand, "Delete google drive file"),
                 BotCommand(BotCommands.ForceStartCommand[0], "Force start a task"),
                 BotCommand(BotCommands.ListCommand, "List files in Google Drive"),
-                BotCommand(BotCommands.SearchCommand, "Search files in Google Drive"),
+                BotCommand(
+                    BotCommands.SearchCommand, "Search files in Google Drive"
+                ),
                 BotCommand(BotCommands.UsersCommand, "Check users"),
                 BotCommand(BotCommands.AuthorizeCommand, "Authorize a user"),
                 BotCommand(BotCommands.UnAuthorizeCommand, "Unauthorize a user"),
@@ -976,7 +974,7 @@ async def set_commands(bot):
                 BotCommand(BotCommands.UserSetCommand[0], "User settings"),
                 BotCommand(BotCommands.BtSelectCommand, "Select a BT download"),
                 BotCommand(BotCommands.RssCommand, "Manage RSS feeds"),
-            ]
+            ],
         )
 
 
@@ -993,16 +991,19 @@ async def start(client, message):
                 )
             if input_token != stored_token:
                 return await sendMessage(
-                    message, "Invalid token.\n\nPlease generate a new one."
+                    message,
+                    "Invalid token.\n\nPlease generate a new one.",
                 )
         if userid not in user_data:
             return await sendMessage(
-                message, "This token is not yours!\n\nKindly generate your own."
+                message,
+                "This token is not yours!\n\nKindly generate your own.",
             )
         data = user_data[userid]
         if "token" not in data or data["token"] != input_token:
             return await sendMessage(
-                message, "Token already used!\n\nKindly generate a new one."
+                message,
+                "Token already used!\n\nKindly generate a new one.",
             )
         token = str(uuid4())
         ttime = time()
@@ -1014,26 +1015,27 @@ async def start(client, message):
         msg = "Token refreshed successfully!\n\n"
         msg += f"Validity: {get_readable_time(int(config_dict['TOKEN_TIMEOUT']))}"
         return await sendMessage(message, msg)
-    else:
-        buttons = ButtonMaker()
-        buttons.ubutton("Group", "https://t.me/Teamleech_updates")
-        buttons.ubutton("Owner", "https://t.me/Teamleech_updates")
-        reply_markup = buttons.build_menu(2)
-        start_string = f"""This bot can mirror all your links|files|torrents to Google Drive or any rclone cloud or to telegram.\nType /{BotCommands.HelpCommand} to get a list of available commands"""
-        await send_to_chat(
-            message=message,
-            text=start_string,
-            buttons=reply_markup,
-            reply=True,
-            photo=True,
-        )
+    buttons = ButtonMaker()
+    buttons.ubutton("Group", "https://t.me/Teamleech_updates")
+    buttons.ubutton("Owner", "https://t.me/Teamleech_updates")
+    reply_markup = buttons.build_menu(2)
+    start_string = f"""This bot can mirror all your links|files|torrents to Google Drive or any rclone cloud or to telegram.\nType /{BotCommands.HelpCommand} to get a list of available commands"""
+    await send_to_chat(
+        message=message,
+        text=start_string,
+        buttons=reply_markup,
+        reply=True,
+        photo=True,
+    )
     await DbManager().update_pm_users(message.from_user.id)
+    return None
 
 
 async def stats(client, message):
     if await aiopath.exists(".git"):
         last_commit = await cmd_exec(
-            "git log -1 --date=short --pretty=format:'%cd <b>\nFrom:</b> %cr'", True
+            "git log -1 --date=short --pretty=format:'%cd <b>\nFrom:</b> %cr'",
+            True,
         )
         last_commit = last_commit[0]
     else:
@@ -1060,12 +1062,16 @@ async def stats(client, message):
         f"<b>Memory Used:</b> {get_readable_file_size(memory.used)}\n"
     )
     await send_to_chat(
-        message=message, text=stats, reply=True, buttons=None, photo=True
+        message=message,
+        text=stats,
+        reply=True,
+        buttons=None,
+        photo=True,
     )
 
 
 async def log(client, message):
-    logFileRead = open("log.txt", "r")
+    logFileRead = open("log.txt")
     logFileLines = logFileRead.read().splitlines()
     ind = 1
     Loglines = ""
@@ -1077,7 +1083,9 @@ async def log(client, message):
             ind += 1
         log_text = Loglines
         await client.send_message(
-            chat_id=message.chat.id, text=log_text, disable_web_page_preview=True
+            chat_id=message.chat.id,
+            text=log_text,
+            disable_web_page_preview=True,
         )
     except Exception as err:
         LOGGER.error(f"Log Display: {err}")
@@ -1102,7 +1110,9 @@ async def add_to_paid_user(client, message):
                 await DbManager().update_user_data(id_)
             msg = "User added in paid user list.\nFrom now token system and some limit will skip for him."
     else:
-        msg = "Give ID or Reply To message of whom you want to add in paid user list."
+        msg = (
+            "Give ID or Reply To message of whom you want to add in paid user list."
+        )
     await send_to_chat(message=message, text=msg, reply=True)
 
 
@@ -1214,45 +1224,58 @@ async def remove_from_blacklist(client, message):
                 await DbManager().update_user_data(id_)
             msg = "User removed from blacklist."
     else:
-        msg = "Give ID or Reply To message of whom you want to remove from blacklist."
+        msg = (
+            "Give ID or Reply To message of whom you want to remove from blacklist."
+        )
     await send_to_chat(message=message, text=msg, reply=True)
 
 
 bot.add_handler(MessageHandler(start, filters=command(BotCommands.StartCommand)))
 bot.add_handler(
     MessageHandler(
-        stats, filters=command(BotCommands.StatsCommand) & CustomFilters.authorized
-    )
+        stats,
+        filters=command(BotCommands.StatsCommand) & CustomFilters.authorized,
+    ),
 )
 bot.add_handler(
-    MessageHandler(log, filters=command(BotCommands.LogCommand) & CustomFilters.sudo)
+    MessageHandler(
+        log, filters=command(BotCommands.LogCommand) & CustomFilters.sudo
+    ),
 )
 bot.add_handler(MessageHandler(checking_access, filters=regex(r"^pass")))
 bot.add_handler(
-    MessageHandler(add_to_paid_user, filters=(command("addpaid") & CustomFilters.sudo))
+    MessageHandler(
+        add_to_paid_user, filters=(command("addpaid") & CustomFilters.sudo)
+    ),
 )
 bot.add_handler(
     MessageHandler(
-        remove_from_paid_user, filters=(command("rmpaid") & CustomFilters.sudo)
-    )
-)
-
-bot.add_handler(
-    MessageHandler(add_to_good_friend, filters=(command("addgdf") & CustomFilters.sudo))
-)
-bot.add_handler(
-    MessageHandler(
-        remove_from_good_friend, filters=(command("rmgdf") & CustomFilters.sudo)
-    )
+        remove_from_paid_user,
+        filters=(command("rmpaid") & CustomFilters.sudo),
+    ),
 )
 
 bot.add_handler(
     MessageHandler(
-        add_to_blacklist, filters=(command("addblacklist") & CustomFilters.sudo)
-    )
+        add_to_good_friend, filters=(command("addgdf") & CustomFilters.sudo)
+    ),
 )
 bot.add_handler(
     MessageHandler(
-        remove_from_blacklist, filters=(command("rmblacklist") & CustomFilters.sudo)
-    )
+        remove_from_good_friend,
+        filters=(command("rmgdf") & CustomFilters.sudo),
+    ),
+)
+
+bot.add_handler(
+    MessageHandler(
+        add_to_blacklist,
+        filters=(command("addblacklist") & CustomFilters.sudo),
+    ),
+)
+bot.add_handler(
+    MessageHandler(
+        remove_from_blacklist,
+        filters=(command("rmblacklist") & CustomFilters.sudo),
+    ),
 )

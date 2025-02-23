@@ -1,10 +1,11 @@
-from asyncio import sleep, gather
+from asyncio import gather, sleep
+
 from pyrogram import Client
 from pyrogram.filters import regex
 from pyrogram.handlers import CallbackQueryHandler
 from pyrogram.types import CallbackQuery, Message
 
-from bot import bot, config_dict, LOGGER
+from bot import LOGGER, bot, config_dict
 from bot.helper.ext_utils.bot_utils import new_task
 from bot.helper.ext_utils.status_utils import action
 from bot.helper.telegram_helper.bot_commands import BotCommands
@@ -13,7 +14,6 @@ from bot.modules.clone import Clone
 from bot.modules.mirror_leech import Mirror
 from bot.modules.video_tools import VidTools
 from bot.modules.ytdlp import YtDlp
-
 
 incompte_dict = {}
 
@@ -47,6 +47,7 @@ async def start_resume_task(client: Client, tasks: list):
         def _check_cmd(cmds):
             if any(x == cmd for x in cmds):
                 return True
+            return None
 
         if _check_cmd(BotCommands.QbMirrorCommand):
             isQbit = True

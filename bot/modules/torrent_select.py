@@ -1,19 +1,24 @@
 from asyncio import gather
+
 from pyrogram.filters import command, regex
 from pyrogram.handlers import CallbackQueryHandler, MessageHandler
 from pyrogram.types import CallbackQuery, Message
 
 from bot import (
+    LOGGER,
+    OWNER_ID,
     aria2,
     bot,
     config_dict,
     task_dict,
     task_dict_lock,
     user_data,
-    LOGGER,
-    OWNER_ID,
 )
-from bot.helper.ext_utils.bot_utils import bt_selection_buttons, sync_to_async, new_task
+from bot.helper.ext_utils.bot_utils import (
+    bt_selection_buttons,
+    new_task,
+    sync_to_async,
+)
 from bot.helper.ext_utils.files_utils import clean_target
 from bot.helper.ext_utils.status_utils import MirrorStatus, getTaskByGid
 from bot.helper.telegram_helper.bot_commands import BotCommands
@@ -49,7 +54,8 @@ async def select(_, message: Message):
             task = task_dict.get(reply_to_id)
         if not task:
             qbselmsg = await sendMessage(
-                f"{message.from_user.mention}, this is not an active task!", message
+                f"{message.from_user.mention}, this is not an active task!",
+                message,
             )
             await auto_delete_message(message, qbselmsg)
             return
@@ -62,13 +68,12 @@ async def select(_, message: Message):
         qbselmsg = await sendMessage(msg, message)
         await auto_delete_message(message, qbselmsg)
         return
-    if (
-        OWNER_ID != user_id
-        and task.listener.user_id != user_id
-        and (user_id not in user_data or not user_data[user_id].get("is_sudo"))
+    if user_id not in (OWNER_ID, task.listener.user_id) and (
+        user_id not in user_data or not user_data[user_id].get("is_sudo")
     ):
         qbselmsg = await sendMessage(
-            f"{task.listener.tag}, this task is not for you!", message
+            f"{task.listener.tag}, this task is not for you!",
+            message,
         )
         await auto_delete_message(message, qbselmsg)
         return
@@ -85,7 +90,8 @@ async def select(_, message: Message):
         return
     if task.name().startswith("[METADATA]"):
         qbselmsg = await sendMessage(
-            f"{task.listener.tag}, try after downloading metadata finished!", message
+            f"{task.listener.tag}, try after downloading metadata finished!",
+            message,
         )
         await auto_delete_message(message, qbselmsg)
         return
@@ -102,7 +108,8 @@ async def select(_, message: Message):
                     await sync_to_async(aria2.client.force_pause, id_)
                 except Exception as e:
                     LOGGER.error(
-                        "%s Error in pause, this mostly happens after abuse aria2", e
+                        "%s Error in pause, this mostly happens after abuse aria2",
+                        e,
                     )
         task.listener.select = True
     except:
@@ -122,7 +129,8 @@ async def get_confirm(_, query: CallbackQuery):
     task = await getTaskByGid(data[2])
     if not task:
         await gather(
-            query.answer("This task has been cancelled!", True), deleteMessage(message)
+            query.answer("This task has been cancelled!", True),
+            deleteMessage(message),
         )
         return
     if user_id != task.listener.user_id:
@@ -141,11 +149,14 @@ async def get_confirm(_, query: CallbackQuery):
                 id_ = data[3]
                 if len(id_) > 20:
                     tor_info = (
-                        await sync_to_async(task.client.torrents_info, torrent_hash=id_)
+                        await sync_to_async(
+                            task.client.torrents_info, torrent_hash=id_
+                        )
                     )[0]
                     path = tor_info.content_path.rsplit("/", 1)[0]
                     res = await sync_to_async(
-                        task.client.torrents_files, torrent_hash=id_
+                        task.client.torrents_files,
+                        torrent_hash=id_,
                     )
                     for f in res:
                         if f.priority == 0:
@@ -156,11 +167,12 @@ async def get_confirm(_, query: CallbackQuery):
                                         f"{path}/{f.name}",
                                         f"{path}/{f.name}.!qB",
                                     ]
-                                ]
+                                ],
                             )
                     if not task.queued:
                         await sync_to_async(
-                            task.client.torrents_resume, torrent_hashes=id_
+                            task.client.torrents_resume,
+                            torrent_hashes=id_,
                         )
                 else:
                     res = await sync_to_async(aria2.client.get_files, id_)
@@ -182,7 +194,8 @@ async def get_confirm(_, query: CallbackQuery):
 
 bot.add_handler(
     MessageHandler(
-        select, filters=command(BotCommands.BtSelectCommand) & CustomFilters.authorized
-    )
+        select,
+        filters=command(BotCommands.BtSelectCommand) & CustomFilters.authorized,
+    ),
 )
 bot.add_handler(CallbackQueryHandler(get_confirm, filters=regex("^btsel")))

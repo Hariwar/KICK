@@ -1,21 +1,27 @@
-from aiofiles.os import path as aiopath, makedirs
-from aioshutil import move
+import contextlib
 from ast import literal_eval
 from asyncio import create_subprocess_exec, gather, sleep, wait_for
 from asyncio.subprocess import PIPE
-from os import path as ospath, cpu_count
-from PIL import Image
-from pyrogram.types import Message
-from re import search as re_search, findall as re_findall, split as re_split
+from os import cpu_count
+from os import path as ospath
+from re import findall as re_findall
+from re import search as re_search
+from re import split as re_split
 from time import time
 
-from bot import config_dict, subprocess_lock, LOGGER, DEFAULT_SPLIT_SIZE, FFMPEG_NAME
-from bot.helper.ext_utils.bot_utils import cmd_exec, sync_to_async, is_premium_user
+from aiofiles.os import makedirs
+from aiofiles.os import path as aiopath
+from aioshutil import move
+from PIL import Image
+from pyrogram.types import Message
+
+from bot import DEFAULT_SPLIT_SIZE, FFMPEG_NAME, LOGGER, config_dict, subprocess_lock
+from bot.helper.ext_utils.bot_utils import cmd_exec, is_premium_user, sync_to_async
 from bot.helper.ext_utils.files_utils import (
     ARCH_EXT,
+    clean_target,
     get_mime_type,
     get_path_size,
-    clean_target,
 )
 from bot.helper.ext_utils.links_utils import get_url_name
 from bot.helper.ext_utils.status_utils import get_readable_file_size
@@ -59,7 +65,7 @@ async def is_multi_streams(path):
                 "json",
                 "-show_streams",
                 path,
-            ]
+            ],
         )
         if res := result[1]:
             LOGGER.warning("Get Video Streams: %s", res)
@@ -91,7 +97,7 @@ async def get_media_info(path):
                 "json",
                 "-show_format",
                 path,
-            ]
+            ],
         )
         if res := result[1]:
             LOGGER.warning("Get Media Info: %s", res)
@@ -138,7 +144,8 @@ async def post_media_info(path: str, size: int, image=None, is_link=False):
 async def get_document_type(path):
     is_video = is_audio = is_image = False
     if path.endswith(tuple(ARCH_EXT)) or re_search(
-        r".+(\.|_)(rar|7z|zip|bin)(\.0*\d+)?$", path
+        r".+(\.|_)(rar|7z|zip|bin)(\.0*\d+)?$",
+        path,
     ):
         return is_video, is_audio, is_image
     mime_type = await sync_to_async(get_mime_type, path)
@@ -159,7 +166,7 @@ async def get_document_type(path):
                 "json",
                 "-show_streams",
                 path,
-            ]
+            ],
         )
         if res := result[1]:
             LOGGER.warning("Get Document Type: %s", res)
@@ -360,7 +367,7 @@ async def split_file(
             _, stderr = await listener.suproc.communicate()
             code = listener.suproc.returncode
             if code == -9:
-                return
+                return None
             if code != 0:
                 stderr = stderr.decode().strip()
                 await clean_target(out_path)
@@ -440,7 +447,7 @@ async def split_file(
         _, stderr = await listener.suproc.communicate()
         code = listener.suproc.returncode
         if code == -9:
-            return
+            return None
         if code != 0:
             LOGGER.error(stderr.decode().strip())
     listener.total_size += await get_path_size(out_path)
@@ -498,7 +505,7 @@ class FFProgress:
                 re_findall(
                     r"(frame|fps|size|time|bitrate|speed)\s*\=\s*(\S+)",
                     line.decode("utf-8"),
-                )
+                ),
             ):
                 if not self._duration:
                     self._duration = (await get_media_info(self.path))[0]
@@ -508,12 +515,10 @@ class FFProgress:
                 self._percentage = (
                     f"{round((time_to_second / self._duration) * 100, 2)}%"
                 )
-                try:
+                with contextlib.suppress(Exception):
                     self._eta = (
                         self._duration / float(progress["speed"].strip("x"))
                     ) - (time() - start_time)
-                except:
-                    pass
 
 
 class SampleVideo(FFProgress):
@@ -620,11 +625,8 @@ async def createArchive(listener, scr_path, dest_path, size, pswd, mpart=False):
         scr_path,
     ]
     cmd.extend(f"-xr!*.{ext}" for ext in listener.extensionFilter)
-    if (
-        listener.isLeech
-        and int(size) > listener.splitSize
-        or mpart
-        and int(size) > listener.splitSize
+    if (listener.isLeech and int(size) > listener.splitSize) or (
+        mpart and int(size) > listener.splitSize
     ):
         if not pswd:
             del cmd[4]
@@ -636,17 +638,19 @@ async def createArchive(listener, scr_path, dest_path, size, pswd, mpart=False):
         LOGGER.info("Zip: orig_path: %s, zip_path: %s", scr_path, dest_path)
     async with subprocess_lock:
         if listener.suproc == "cancelled":
-            return
+            return None
         listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     _, stderr = await listener.suproc.communicate()
     code = listener.suproc.returncode
     if code == -9:
-        return
+        return None
     if code == 0:
         if not listener.seed:
             await clean_target(scr_path, True)
         return True
-    LOGGER.error("%s. Unable to zip this path: %s", stderr.decode().strip(), scr_path)
+    LOGGER.error(
+        "%s. Unable to zip this path: %s", stderr.decode().strip(), scr_path
+    )
     return True
 
 
@@ -684,7 +688,7 @@ class GenSS:
                 "scale=1920:-1,tile=3x3",
                 self._images,
                 "-y",
-            ]
+            ],
         )
         if not await aiopath.exists(self._images):
             self._images = ""
@@ -704,7 +708,7 @@ class GenSS:
             "-i",
             self._path,
             "-vf",
-            "drawtext=fontfile=font.ttf:fontsize=70:fontcolor=white:box=1:boxcolor=black@0.7:x=(W-tw)/1.05:y=h-(2*lh):text='%{pts\:hms}'",
+            r"drawtext=fontfile=font.ttf:fontsize=70:fontcolor=white:box=1:boxcolor=black@0.7:x=(W-tw)/1.05:y=h-(2*lh):text='%{pts\:hms}'",
             "-vframes",
             "1",
             des_dir,
@@ -715,6 +719,7 @@ class GenSS:
             with Image.open(des_dir) as img:
                 img.convert("RGB").save(des_dir, "JPEG")
             return des_dir
+        return None
 
     async def file_ss(self):
         min_dur, max_photo = 5, 10
@@ -733,7 +738,9 @@ class GenSS:
                 await self._combine_image()
         if not self._images:
             self._error = "Failed generated screenshot, something wrong with url or not video in url!"
-            LOGGER.info("Failed Generating Screenshot: %s", ospath.basename(self._path))
+            LOGGER.info(
+                "Failed Generating Screenshot: %s", ospath.basename(self._path)
+            )
         await clean_target(self._ss_path)
 
     async def ddl_ss(self):

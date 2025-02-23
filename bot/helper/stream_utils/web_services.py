@@ -1,6 +1,6 @@
 from aiohttp import web
 
-from bot import config_dict, LOGGER
+from bot import LOGGER, config_dict
 from bot.helper.stream_utils.stream_routes import routes
 
 

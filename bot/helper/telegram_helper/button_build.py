@@ -1,4 +1,4 @@
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 
 class ButtonMaker:
@@ -25,14 +25,16 @@ class ButtonMaker:
         match position:
             case "header":
                 self._header_button.append(
-                    InlineKeyboardButton(text=key, callback_data=data)
+                    InlineKeyboardButton(text=key, callback_data=data),
                 )
             case "footer":
                 self._footer_button.append(
-                    InlineKeyboardButton(text=key, callback_data=data)
+                    InlineKeyboardButton(text=key, callback_data=data),
                 )
             case _:
-                self._button.append(InlineKeyboardButton(text=key, callback_data=data))
+                self._button.append(
+                    InlineKeyboardButton(text=key, callback_data=data)
+                )
 
     def build_menu(self, b_cols=1, h_cols=8, f_cols=8):
         menu = [

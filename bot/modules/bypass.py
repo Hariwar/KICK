@@ -1,37 +1,42 @@
-from pyrogram import Client
-from pyrogram.filters import command
-from pyrogram.handlers import MessageHandler
-from pyrogram.types import Message
 from random import choice
 from time import time
 from urllib.parse import urlparse
 
-from bot import bot, config_dict, LOGGER
+from pyrogram import Client
+from pyrogram.filters import command
+from pyrogram.handlers import MessageHandler
+from pyrogram.types import Message
+
+from bot import LOGGER, bot, config_dict
 from bot.helper.ext_utils.bot_utils import (
-    sync_to_async,
-    new_task,
     arg_parser,
     is_premium_user,
+    new_task,
+    sync_to_async,
 )
 from bot.helper.ext_utils.commons_check import UseCheck
 from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
-from bot.helper.ext_utils.links_utils import is_url, get_link
-from bot.helper.ext_utils.status_utils import get_readable_time, action, get_date_time
+from bot.helper.ext_utils.links_utils import get_link, is_url
+from bot.helper.ext_utils.status_utils import (
+    action,
+    get_date_time,
+    get_readable_time,
+)
 from bot.helper.listeners.tasks_listener import TaskListener
 from bot.helper.mirror_utils.download_utils.direct_link_generator import (
-    sites,
     direct_link_generator,
+    sites,
 )
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    limit,
     auto_delete_message,
-    sendMessage,
-    editMessage,
     copyMessage,
     deleteMessage,
+    editMessage,
+    limit,
+    sendMessage,
     sendPhoto,
 )
 
@@ -66,7 +71,9 @@ class Bypass(TaskListener):
         await self.getTag(text)
 
         if fmsg := await UseCheck(self.message).run(forpremi=True, session=True):
-            await auto_delete_message(self.message, fmsg, self.message.reply_to_message)
+            await auto_delete_message(
+                self.message, fmsg, self.message.reply_to_message
+            )
             return
 
         arg_base = {"link": "", "-i": 0, "-b": False}
@@ -95,7 +102,8 @@ class Bypass(TaskListener):
             and (self.multi > 0 or isBulk)
         ):
             await sendMessage(
-                f"Upss {self.tag}, multi/bulk mode for premium user only", self.message
+                f"Upss {self.tag}, multi/bulk mode for premium user only",
+                self.message,
             )
             return
 
@@ -130,11 +138,13 @@ class Bypass(TaskListener):
             LOGGER.info("Failed to bypass: %s", self.link)
             if str(err).startswith("ERROR:"):
                 err = str(err).replace(
-                    "trying to generate direct", "when trying bypass"
+                    "trying to generate direct",
+                    "when trying bypass",
                 )
             elif "No direct link function" in str(err):
                 err = str(err).replace(
-                    "No direct link function found for", "Unsupport site for"
+                    "No direct link function found for",
+                    "Unsupport site for",
                 )
             await editMessage(f"{self.tag}, {err}", self.editable)
             return
@@ -153,7 +163,7 @@ class Bypass(TaskListener):
                         [
                             f"<b>{i}.</b> <code>{res['url']}</code>"
                             for i, res in enumerate(contents, 1)
-                        ]
+                        ],
                     )
             elif isinstance(result, tuple):
                 result = f"<code>{result[0]}</code>"
@@ -199,7 +209,9 @@ class Bypass(TaskListener):
             stime := config_dict["AUTO_DELETE_UPLOAD_MESSAGE_DURATION"]
         ):
             await auto_delete_message(
-                self.message, self.message.reply_to_message, stime=stime
+                self.message,
+                self.message.reply_to_message,
+                stime=stime,
             )
 
 
@@ -209,6 +221,7 @@ async def bypass(client: Client, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        bypass, filters=command(BotCommands.BypassCommand) & CustomFilters.authorized
-    )
+        bypass,
+        filters=command(BotCommands.BypassCommand) & CustomFilters.authorized,
+    ),
 )

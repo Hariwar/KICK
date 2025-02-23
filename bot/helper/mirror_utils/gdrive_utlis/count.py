@@ -1,4 +1,5 @@
 from logging import getLogger
+
 from tenacity import RetryError
 
 from bot.helper.mirror_utils.gdrive_utlis.helper import GoogleDriveHelper
@@ -55,7 +56,13 @@ class gdCount(GoogleDriveHelper):
                 mime_type = "File"
             self.total_files += 1
             self._gDrive_file(meta)
-        return (name, mime_type, self.proc_bytes, self.total_files, self.total_folders)
+        return (
+            name,
+            mime_type,
+            self.proc_bytes,
+            self.total_files,
+            self.total_folders,
+        )
 
     def _gDrive_file(self, filee):
         size = int(filee.get("size", 0))

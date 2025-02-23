@@ -1,19 +1,22 @@
 from __future__ import annotations
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from os import path as ospath, listdir
+
+from os import listdir
+from os import path as ospath
 from pickle import load as pload
 from random import randrange
 from re import search as re_search
-from tenacity import (
-    retry,
-    wait_exponential,
-    stop_after_attempt,
-    retry_if_exception_type,
-)
 from urllib.parse import parse_qs, urlparse
 
-from bot import config_dict, user_data, LOGGER
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from bot import LOGGER, config_dict, user_data
 from bot.helper.ext_utils.links_utils import is_gdrive_id
 
 
@@ -25,7 +28,9 @@ class GoogleDriveHelper:
         self.G_DRIVE_BASE_DOWNLOAD_URL = (
             "https://drive.google.com/uc?id={}&export=download"
         )
-        self.G_DRIVE_DIR_BASE_DOWNLOAD_URL = "https://drive.google.com/drive/folders/{}"
+        self.G_DRIVE_DIR_BASE_DOWNLOAD_URL = (
+            "https://drive.google.com/drive/folders/{}"
+        )
         self.is_uploading = False
         self.is_downloading = False
         self.is_cloning = False
@@ -61,7 +66,9 @@ class GoogleDriveHelper:
                 self.status.total_size * self.status.progress()
                 - self.file_processed_bytes
             )
-            self.file_processed_bytes = self.status.total_size * self.status.progress()
+            self.file_processed_bytes = (
+                self.status.total_size * self.status.progress()
+            )
             self.proc_bytes += chunk_size
             self.total_time += self.update_interval
 
@@ -72,10 +79,12 @@ class GoogleDriveHelper:
             self.sa_number = len(json_files)
             self.sa_index = randrange(self.sa_number)
             LOGGER.info(
-                "Authorizing with %s service account", json_files[self.sa_index]
+                "Authorizing with %s service account",
+                json_files[self.sa_index],
             )
             credentials = service_account.Credentials.from_service_account_file(
-                f"accounts/{json_files[self.sa_index]}", scopes=self._OAUTH_SCOPE
+                f"accounts/{json_files[self.sa_index]}",
+                scopes=self._OAUTH_SCOPE,
             )
         elif ospath.exists(self.token_path):
             LOGGER.info("Authorize with %s", self.token_path)
@@ -97,10 +106,8 @@ class GoogleDriveHelper:
     def getIdFromUrl(self, link: str, user_id: int = ""):
         use_sa = user_data.get(user_id, {}).get("use_sa")
         user_token = f"tokens/{user_id}.pickle"
-        if (
-            user_id
-            and link.startswith("mtp:")
-            or (
+        if (user_id and link.startswith("mtp:")) or (
+            (
                 hasattr(self, "listener")
                 and getattr(self.listener, "privateLink", None)
             )
@@ -219,7 +226,9 @@ class GoogleDriveHelper:
         if not config_dict["IS_TEAM_DRIVE"]:
             self.set_permission(file_id)
         LOGGER.info(
-            "Created G-Drive Folder:\nName: %s\nID: %s", file.get("name"), file_id
+            "Created G-Drive Folder:\nName: %s\nID: %s",
+            file.get("name"),
+            file_id,
         )
         return file_id
 
@@ -238,10 +247,10 @@ class GoogleDriveHelper:
         elif self.is_cloning:
             LOGGER.info("Cancelling Clone: %s", self.listener.name)
             await self.listener.onUploadError(
-                "Your clone has been stopped and cloned data has been deleted!"
+                "Your clone has been stopped and cloned data has been deleted!",
             )
         elif self.is_uploading:
             LOGGER.info("Cancelling Upload: %s", self.listener.name)
             await self.listener.onUploadError(
-                "Your upload has been stopped and uploaded data has been deleted!"
+                "Your upload has been stopped and uploaded data has been deleted!",
             )

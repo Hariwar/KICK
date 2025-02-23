@@ -1,9 +1,9 @@
 from aiofiles import open as aiopen
 from pyrogram.filters import command
-from pyrogram.handlers import MessageHandler, EditedMessageHandler
+from pyrogram.handlers import EditedMessageHandler, MessageHandler
 from pyrogram.types import Message
 
-from bot import bot, config_dict, LOGGER
+from bot import LOGGER, bot, config_dict
 from bot.helper.ext_utils.bot_utils import cmd_exec, new_task
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
@@ -29,7 +29,10 @@ async def shell(_, message: Message):
         async with aiopen("shell_output.txt", "w") as f:
             await f.write(text)
         await sendFile(
-            message, "shell_output.txt", "shell_output", config_dict["IMAGE_TXT"]
+            message,
+            "shell_output.txt",
+            "shell_output",
+            config_dict["IMAGE_TXT"],
         )
     elif len(text) != 0:
         await sendMessage(text, message)
@@ -39,11 +42,13 @@ async def shell(_, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        shell, filters=command(BotCommands.ShellCommand) & CustomFilters.blasty
-    )
+        shell,
+        filters=command(BotCommands.ShellCommand) & CustomFilters.blasty,
+    ),
 )
 bot.add_handler(
     EditedMessageHandler(
-        shell, filters=command(BotCommands.ShellCommand) & CustomFilters.blasty
-    )
+        shell,
+        filters=command(BotCommands.ShellCommand) & CustomFilters.blasty,
+    ),
 )

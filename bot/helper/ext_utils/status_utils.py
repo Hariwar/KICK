@@ -1,13 +1,14 @@
+import contextlib
 from html import escape
-from psutil import virtual_memory, cpu_percent, disk_usage, net_io_counters
-from pyrogram.types import Message
 from time import time
+
+from psutil import cpu_percent, disk_usage, net_io_counters, virtual_memory
+from pyrogram.types import Message
 from pytz import timezone
 
-from bot import bot_name, task_dict, task_dict_lock, botStartTime, config_dict
+from bot import bot_name, botStartTime, config_dict, task_dict, task_dict_lock
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
-
 
 SIZE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"]
 
@@ -136,9 +137,13 @@ def action(message: Message):
 
 
 def get_readable_message(
-    sid: int, is_user: bool, page_no: int = 1, status: str = "All", page_step: int = 1
+    sid: int,
+    is_user: bool,
+    page_no: int = 1,
+    status: str = "All",
+    page_step: int = 1,
 ):
-    msg = f"<a <b>Powered By TeamLeech</b></i></a>\n\n"
+    msg = "<a <b>Powered By TeamLeech</b></i></a>\n\n"
     dl_speed = up_speed = 0
 
     if status == "All":
@@ -165,7 +170,8 @@ def get_readable_message(
         page_no = pages - (abs(page_no) % pages)
     start_position = (page_no - 1) * STATUS_LIMIT
     for index, task in enumerate(
-        tasks[start_position : STATUS_LIMIT + start_position], start=1
+        tasks[start_position : STATUS_LIMIT + start_position],
+        start=1,
     ):
         tstatus = task.status()
         msg += f"<b>{index + start_position}.</b> <code>{escape(str(task.name())) or 'N/A'}</code>"
@@ -206,10 +212,10 @@ def get_readable_message(
             if tstatus == MirrorStatus.STATUS_WAIT:
                 msg += f"\n<b>├ Timeout: </b>{task.timeout()}"
             if hasattr(task, "seeders_num"):
-                try:
-                    msg += f"\n<b>├ S/L:</b> {task.seeders_num()}/{task.leechers_num()}"
-                except:
-                    pass
+                with contextlib.suppress(Exception):
+                    msg += (
+                        f"\n<b>├ S/L:</b> {task.seeders_num()}/{task.leechers_num()}"
+                    )
         elif tstatus == MirrorStatus.STATUS_SEEDING:
             msg += (
                 f"\n<b>├ Size:</b> {task.size()}"
@@ -233,7 +239,10 @@ def get_readable_message(
 
     for task in tasks:
         tstatus = task.status()
-        if tstatus == MirrorStatus.STATUS_DOWNLOADING or task.engine() == "JDownloader":
+        if (
+            tstatus == MirrorStatus.STATUS_DOWNLOADING
+            or task.engine() == "JDownloader"
+        ):
             dl_speed += speed_string_to_bytes(task.speed())
         elif tstatus == MirrorStatus.STATUS_UPLOADING:
             up_speed += speed_string_to_bytes(task.speed())

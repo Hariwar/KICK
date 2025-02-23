@@ -1,33 +1,41 @@
 from __future__ import annotations
-from aiofiles.os import path as aiopath
-from time import time
+
 from asyncio import gather
+from time import time
+from typing import TYPE_CHECKING
+
+from aiofiles.os import path as aiopath
 
 from bot import (
-    task_dict,
-    task_dict_lock,
+    LOGGER,
     config_dict,
+    get_client,
     non_queued_dl,
     queue_dict_lock,
-    get_client,
-    LOGGER,
+    task_dict,
+    task_dict_lock,
 )
 from bot.helper.ext_utils.bot_utils import bt_selection_buttons, sync_to_async
 from bot.helper.ext_utils.files_utils import clean_target
 from bot.helper.ext_utils.task_manager import check_running_tasks
-from bot.helper.listeners import tasks_listener as task
 from bot.helper.listeners.qbit_listener import onDownloadStart
 from bot.helper.mirror_utils.status_utils.qbit_status import QbittorrentStatus
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
     deleteMessage,
-    sendStatusMessage,
     sendingMessage,
+    sendMessage,
+    sendStatusMessage,
 )
+
+if TYPE_CHECKING:
+    from bot.helper.listeners import tasks_listener as task
 
 
 async def add_qb_torrent(
-    listener: task.TaskListener, path: str, ratio: int, seed_time: int
+    listener: task.TaskListener,
+    path: str,
+    ratio: int,
+    seed_time: int,
 ):
     client = await sync_to_async(get_client)
     ADD_TIME = time()
@@ -50,11 +58,14 @@ async def add_qb_torrent(
             headers={"user-agent": "Wget/1.12"},
         )
         if op.lower() == "ok.":
-            tor_info = await sync_to_async(client.torrents_info, tag=f"{listener.mid}")
+            tor_info = await sync_to_async(
+                client.torrents_info, tag=f"{listener.mid}"
+            )
             if len(tor_info) == 0:
                 while True:
                     tor_info = await sync_to_async(
-                        client.torrents_info, tag=f"{listener.mid}"
+                        client.torrents_info,
+                        tag=f"{listener.mid}",
                     )
                     if len(tor_info) > 0:
                         break
@@ -72,16 +83,22 @@ async def add_qb_torrent(
             )
             return
         async with task_dict_lock:
-            task_dict[listener.mid] = QbittorrentStatus(listener, queued=add_to_queue)
+            task_dict[listener.mid] = QbittorrentStatus(
+                listener, queued=add_to_queue
+            )
         await onDownloadStart(f"{listener.mid}")
         if add_to_queue:
             LOGGER.info(
-                "Added to Queue/Download: %s - Hash: %s", tor_info.name, ext_hash
+                "Added to Queue/Download: %s - Hash: %s",
+                tor_info.name,
+                ext_hash,
             )
         else:
             async with queue_dict_lock:
                 non_queued_dl.add(listener.mid)
-            LOGGER.info("QbitDownload started: %s - Hash: %s", tor_info.name, ext_hash)
+            LOGGER.info(
+                "QbitDownload started: %s - Hash: %s", tor_info.name, ext_hash
+            )
         await listener.onDownloadStart()
         if config_dict["BASE_URL"] and listener.select:
             if listener.link.startswith("magnet:"):
@@ -89,7 +106,8 @@ async def add_qb_torrent(
                 meta = await sendMessage(metamsg, listener.message)
                 while True:
                     tor_info = await sync_to_async(
-                        client.torrents_info, tag=f"{listener.mid}"
+                        client.torrents_info,
+                        tag=f"{listener.mid}",
                     )
                     if len(tor_info) == 0:
                         await deleteMessage(meta)
@@ -112,7 +130,10 @@ async def add_qb_torrent(
             SBUTTONS = bt_selection_buttons(ext_hash)
             msg = f"<code>{tor_info.name}</code>\n\n{listener.tag}, your download paused. Choose files then press <b>Done Selecting</b> button to start downloading."
             await sendingMessage(
-                msg, listener.message, config_dict["IMAGE_PAUSE"], SBUTTONS
+                msg,
+                listener.message,
+                config_dict["IMAGE_PAUSE"],
+                SBUTTONS,
             )
         elif listener.multi <= 1:
             await sendStatusMessage(listener.message)

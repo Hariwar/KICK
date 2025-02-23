@@ -1,24 +1,26 @@
-from aiofiles.os import path as aiopath, makedirs
-from aiohttp import ClientSession
-from asyncio import sleep, gather, Event, wrap_future, wait_for
+from asyncio import Event, gather, sleep, wait_for, wrap_future
 from functools import partial
-from gtts import gTTS
 from os import path as ospath
+from urllib.parse import quote_plus
+
+from aiofiles.os import makedirs
+from aiofiles.os import path as aiopath
+from aiohttp import ClientSession
+from gtts import gTTS
 from PIL import Image
 from pyrogram import Client
 from pyrogram.filters import command, regex
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Message, CallbackQuery
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+from pyrogram.types import CallbackQuery, Message
 from telegraph import upload_file
-from urllib.parse import quote_plus
 
-from bot import bot, config_dict, LOGGER
+from bot import LOGGER, bot, config_dict
 from bot.helper.ext_utils.bot_utils import (
     ButtonMaker,
     is_premium_user,
-    sync_to_async,
     new_task,
     new_thread,
+    sync_to_async,
 )
 from bot.helper.ext_utils.files_utils import clean_target, downlod_content
 from bot.helper.ext_utils.help_messages import HelpString
@@ -27,9 +29,9 @@ from bot.helper.ext_utils.media_utils import GenSS
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
     deleteMessage,
+    editMessage,
+    sendMessage,
     sendPhoto,
     sendSticker,
 )
@@ -49,6 +51,7 @@ class MiscTool:
             if r.status == 200:
                 return await r.json()
             self.error = f"Got respons {r.status}"
+            return None
 
     def _is_animated(self):
         self.error = ""
@@ -61,9 +64,9 @@ class MiscTool:
         await self._doc.download(file_name=f"./{self.file}")
 
     def is_image(self):
-        if self.reply_to.photo:
-            self._doc = self.reply_to
-        elif self.reply_to.document and "image" in self.reply_to.document.mime_type:
+        if self.reply_to.photo or (
+            self.reply_to.document and "image" in self.reply_to.document.mime_type
+        ):
             self._doc = self.reply_to
         if not self._doc or self.reply_to.video:
             self.error = "ERROR: Invalid reply!"
@@ -76,11 +79,13 @@ class MiscTool:
     async def webss(self, url, mode="webss"):
         if mode == "webss":
             LOGGER.info("Generated Screemshot: %s", url)
-            url = f"https://webss.yasirapi.eu.org/api?url={url}&width=1080&height=720"
+            url = (
+                f"https://webss.yasirapi.eu.org/api?url={url}&width=1080&height=720"
+            )
             self.file = f"Webss_{self.message.id}.png"
         if not await downlod_content(url, self.file):
             self.error = f"Failed to download {self.file}"
-            return
+            return None
         return self.file
 
     async def vidss(self, url):
@@ -88,7 +93,7 @@ class MiscTool:
         await vidss.ddl_ss()
         if vidss.error:
             self.error = vidss.error
-            return
+            return None
         self.file = vidss.rimage
         return vidss
 
@@ -121,7 +126,7 @@ class MiscTool:
         url = f"https://yasirapi.eu.org/pahe?q={title}"
         result = await self._get_content(url)
         if self.error:
-            return
+            return None
         return result["result"]
 
     async def image_ocr(self):
@@ -143,7 +148,7 @@ class MiscTool:
             is_image = False
             self._is_animated()
         if self.error:
-            return
+            return None
         ext = ".webp" if is_image else ".jpg"
         self.file = ospath.join("downloads", f"{self.message.id}{ext}")
         await self._download_image()
@@ -285,7 +290,8 @@ class Misc(MiscTool):
     async def _event_handler(self):
         pfunc = partial(misc_callback, obj=self)
         handler = self._client.add_handler(
-            CallbackQueryHandler(pfunc, filters=regex("^misc")), group=-1
+            CallbackQueryHandler(pfunc, filters=regex("^misc")),
+            group=-1,
         )
         try:
             await wait_for(self.event.wait(), timeout=500)
@@ -347,7 +353,9 @@ class Misc(MiscTool):
                     )
                     result = await self.pahe_search(self.query)
                     if self.error or not result:
-                        text = f"Not found Pahe search for <b>{self.query.title()}</b>."
+                        text = (
+                            f"Not found Pahe search for <b>{self.query.title()}</b>."
+                        )
                         if self.error:
                             text += f"\nERROR: {self.error}"
                     else:
@@ -358,18 +366,22 @@ class Misc(MiscTool):
                         )
             case "thumb":
                 await editMessage(
-                    "<i>Getting thumbnail(s), please wait...</i>", self.editable
+                    "<i>Getting thumbnail(s), please wait...</i>",
+                    self.editable,
                 )
                 text = self.query.replace(".", " ").replace("  ", " ")
                 pngs, dirpath = await self.thumb(text)
                 if pngs:
                     text = f"Sucsesfully generating thumbnail poster for <b>{text.title()}</b>."
                     await editMessage(
-                        f"{text}. <i>Sending the files...</i>", self.editable
+                        f"{text}. <i>Sending the files...</i>",
+                        self.editable,
                     )
                     for png in pngs:
                         await sendPhoto(
-                            f"<code>{ospath.basename(png)}</code>", self.message, png
+                            f"<code>{ospath.basename(png)}</code>",
+                            self.message,
+                            png,
                         )
                         if len(pngs) > 1:
                             await sleep(5)
@@ -423,7 +435,8 @@ class Misc(MiscTool):
                     text = self.error
             case "wss" | "vss" as value:
                 await editMessage(
-                    "<i>Generated screenshot, please wait...</i>", self.editable
+                    "<i>Generated screenshot, please wait...</i>",
+                    self.editable,
                 )
                 if value == "wss":
                     photo = await self.webss(self.query)
@@ -443,7 +456,9 @@ class Misc(MiscTool):
                     buttons.reset()
                     buttons.button_link("Source", self.query)
                     await gather(
-                        sendPhoto(caption, self.message, photo, buttons.build_menu(1)),
+                        sendPhoto(
+                            caption, self.message, photo, buttons.build_menu(1)
+                        ),
                         deleteMessage(self.editable),
                     )
                 await clean_target(self.file)
@@ -456,10 +471,11 @@ class Misc(MiscTool):
         if config_dict["PREMIUM_MODE"] and not is_premium_user(
             self.message.from_user.id
             if self.message.from_user
-            else self.message.sender_chat.id
+            else self.message.sender_chat.id,
         ):
             await sendMessage(
-                "This feature only for <b>Premium User</b>!", self.message
+                "This feature only for <b>Premium User</b>!",
+                self.message,
             )
             return
         if not self.reply_to and len(self.message.command) == 1:
@@ -483,7 +499,8 @@ async def misc_callback(_, query: CallbackQuery, obj: Misc):
         case "close":
             obj.event.set()
             await gather(
-                query.answer(), deleteMessage(obj.editable, obj.message, obj.reply_to)
+                query.answer(),
+                deleteMessage(obj.editable, obj.message, obj.reply_to),
             )
             return
         case "back":
@@ -515,6 +532,7 @@ async def misc_tools(client: Client, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        misc_tools, filters=command(BotCommands.MiscCommand) & CustomFilters.authorized
-    )
+        misc_tools,
+        filters=command(BotCommands.MiscCommand) & CustomFilters.authorized,
+    ),
 )

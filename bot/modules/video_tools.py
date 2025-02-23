@@ -1,23 +1,24 @@
-from aiofiles.os import path as aiopath
 from asyncio import sleep
+from secrets import token_urlsafe
+
+from aiofiles.os import path as aiopath
 from pyrogram import Client
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
-from secrets import token_urlsafe
 
-from bot import bot, config_dict, LOGGER
-from bot.helper.ext_utils.bot_utils import new_task, arg_parser, is_premium_user
+from bot import LOGGER, bot, config_dict
+from bot.helper.ext_utils.bot_utils import arg_parser, is_premium_user, new_task
 from bot.helper.ext_utils.commons_check import UseCheck
-from bot.helper.ext_utils.links_utils import is_url, get_url_name, get_link
+from bot.helper.ext_utils.links_utils import get_link, get_url_name, is_url
 from bot.helper.listeners.tasks_listener import TaskListener
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
-    deleteMessage,
     auto_delete_message,
+    deleteMessage,
+    editMessage,
+    sendMessage,
 )
 from bot.helper.video_utils.executor import VidEcxecutor, get_metavideo
 from bot.helper.video_utils.selector import SelectMode
@@ -54,9 +55,15 @@ class VidTools(TaskListener):
         await self.getTag(text)
 
         if fmsg := await UseCheck(self.message, self.isLeech).run(
-            True, daily=True, ml_chek=True, session=True, send_pm=True
+            True,
+            daily=True,
+            ml_chek=True,
+            session=True,
+            send_pm=True,
         ):
-            await auto_delete_message(self.message, fmsg, self.message.reply_to_message)
+            await auto_delete_message(
+                self.message, fmsg, self.message.reply_to_message
+            )
             return
 
         arg_base = {
@@ -106,7 +113,8 @@ class VidTools(TaskListener):
             and (self.multi > 0 or isBulk)
         ):
             await sendMessage(
-                f"Upss {self.tag}, multi/bulk mode for premium user only", self.message
+                f"Upss {self.tag}, multi/bulk mode for premium user only",
+                self.message,
             )
             return
 
@@ -121,7 +129,8 @@ class VidTools(TaskListener):
 
         if not is_url(self.link):
             await sendMessage(
-                "Send command along with link or by reply to the link!", self.message
+                "Send command along with link or by reply to the link!",
+                self.message,
             )
             self.run_multi(input_list, "", VidTools)
             return
@@ -142,7 +151,8 @@ class VidTools(TaskListener):
         self.name = get_url_name(self.link)
         self.run_multi(input_list, "", VidTools)
         self.editable = await sendMessage(
-            "<i>Checking request, please wait...</i>", self.message
+            "<i>Checking request, please wait...</i>",
+            self.message,
         )
         await sleep(1)
 
@@ -179,11 +189,11 @@ bot.add_handler(
     MessageHandler(
         mirror_vidtools,
         filters=command(BotCommands.MVidCommand) & CustomFilters.authorized,
-    )
+    ),
 )
 bot.add_handler(
     MessageHandler(
         leech_vidtools,
         filters=command(BotCommands.LVidCommand) & CustomFilters.authorized,
-    )
+    ),
 )

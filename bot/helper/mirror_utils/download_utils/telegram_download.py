@@ -1,23 +1,35 @@
 from __future__ import annotations
-from asyncio import Lock, gather
-from logging import getLogger, ERROR
-from os import path as ospath
-from pyrogram import Client
-from time import time
 
-from bot import bot, task_dict, task_dict_lock, non_queued_dl, queue_dict_lock, LOGGER
+import contextlib
+from asyncio import Lock, gather
+from logging import ERROR, getLogger
+from os import path as ospath
+from time import time
+from typing import TYPE_CHECKING
+
+from bot import (
+    LOGGER,
+    bot,
+    non_queued_dl,
+    queue_dict_lock,
+    task_dict,
+    task_dict_lock,
+)
 from bot.helper.ext_utils.links_utils import is_media
 from bot.helper.ext_utils.status_utils import get_readable_file_size
 from bot.helper.ext_utils.task_manager import (
+    check_limits_size,
     check_running_tasks,
     stop_duplicate_check,
-    check_limits_size,
 )
-from bot.helper.listeners import tasks_listener as task
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
 from bot.helper.mirror_utils.status_utils.telegram_status import TelegramStatus
 from bot.helper.telegram_helper.message_utils import sendStatusMessage
 
+if TYPE_CHECKING:
+    from pyrogram import Client
+
+    from bot.helper.listeners import tasks_listener as task
 
 global_lock = Lock()
 GLOBAL_GID = set()
@@ -47,7 +59,11 @@ class TelegramDownloadHelper:
         self._id = file_id
         async with task_dict_lock:
             task_dict[self._listener.mid] = TelegramStatus(
-                self._listener, self, size, file_id[:12], "dl"
+                self._listener,
+                self,
+                size,
+                file_id[:12],
+                "dl",
             )
         async with queue_dict_lock:
             non_queued_dl.add(self._listener.mid)
@@ -57,7 +73,9 @@ class TelegramDownloadHelper:
                 await sendStatusMessage(self._listener.message)
             LOGGER.info("Download from Telegram: %s", self._listener.name)
         else:
-            LOGGER.info("Start Queued Download from Telegram: %s", self._listener.name)
+            LOGGER.info(
+                "Start Queued Download from Telegram: %s", self._listener.name
+            )
 
     async def _onDownloadProgress(self, current, total):
         if self._is_cancelled:
@@ -67,10 +85,8 @@ class TelegramDownloadHelper:
 
     async def _onDownloadError(self, error, listfile=None):
         async with global_lock:
-            try:
+            with contextlib.suppress(Exception):
                 GLOBAL_GID.remove(self._id)
-            except:
-                pass
         await self._listener.onDownloadError(error, listfile)
 
     async def _onDownloadComplete(self):
@@ -81,7 +97,9 @@ class TelegramDownloadHelper:
     async def _download(self, message, path):
         try:
             download = await self._client.download_media(
-                message, file_name=path, progress=self._onDownloadProgress
+                message,
+                file_name=path,
+                progress=self._onDownloadProgress,
             )
             if self._is_cancelled:
                 return
@@ -121,7 +139,7 @@ class TelegramDownloadHelper:
                 if msg := await check_limits_size(self._listener, size):
                     LOGGER.info("File/folder size over the limit size!")
                     await self._onDownloadError(
-                        f"{msg}. File/folder size is {get_readable_file_size(size)}."
+                        f"{msg}. File/folder size is {get_readable_file_size(size)}.",
                     )
                     return
 
@@ -130,7 +148,10 @@ class TelegramDownloadHelper:
                     LOGGER.info("Added to Queue/Download: %s", self._listener.name)
                     async with task_dict_lock:
                         task_dict[self._listener.mid] = QueueStatus(
-                            self._listener, size, gid, "dl"
+                            self._listener,
+                            size,
+                            gid,
+                            "dl",
                         )
                     await gather(
                         self._listener.onDownloadStart(),
@@ -152,7 +173,7 @@ class TelegramDownloadHelper:
             await self._onDownloadError(
                 "No document from given link!"
                 if self._listener.session
-                else "No document in the replied message"
+                else "No document in the replied message",
             )
 
     async def cancel_task(self):

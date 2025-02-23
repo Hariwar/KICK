@@ -1,7 +1,9 @@
 from threading import Event
-from mega import MegaApi, MegaListener, MegaError, MegaRequest, MegaTransfer
-from bot.helper.ext_utils.bot_utils import async_to_sync, sync_to_async
+
+from mega import MegaApi, MegaError, MegaListener, MegaRequest, MegaTransfer
+
 from bot import LOGGER
+from bot.helper.ext_utils.bot_utils import async_to_sync, sync_to_async
 
 
 class AsyncExecutor:
@@ -79,7 +81,8 @@ class MegaAppListener(MegaListener):
         if not self.is_cancelled:
             self.is_cancelled = True
             async_to_sync(
-                self.listener.onDownloadError, f"RequestTempError: {error.toString()}"
+                self.listener.onDownloadError,
+                f"RequestTempError: {error.toString()}",
             )
         self.error = error.toString()
         self.continue_event.set()
@@ -105,10 +108,14 @@ class MegaAppListener(MegaListener):
             LOGGER.error(e)
 
     def onTransferTemporaryError(self, api, transfer, error):
-        LOGGER.error(f"Mega download error in file {transfer.getFileName()}: {error}")
+        LOGGER.error(
+            f"Mega download error in file {transfer.getFileName()}: {error}"
+        )
         if transfer.getState() in [1, 4]:
             return
-        self.error = f"TransferTempError: {error.toString()} ({transfer.getFileName()})"
+        self.error = (
+            f"TransferTempError: {error.toString()} ({transfer.getFileName()})"
+        )
         if not self.is_cancelled:
             self.is_cancelled = True
             self.continue_event.set()

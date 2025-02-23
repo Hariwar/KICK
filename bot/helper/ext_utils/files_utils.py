@@ -1,26 +1,32 @@
-from aiofiles import open as aiopen
-from aiofiles.os import remove as aioremove, path as aiopath, listdir
-from aiohttp import ClientSession
-from aioshutil import rmtree as aiormtree, disk_usage
-from magic import Magic
-from os import walk, path as ospath, makedirs
-from re import split as re_split, search as re_search, escape, I
+from os import makedirs, walk
+from os import path as ospath
+from re import IGNORECASE, escape
+from re import search as re_search
+from re import split as re_split
 from subprocess import run as srun
 from sys import exit as sexit
 
+from aiofiles import open as aiopen
+from aiofiles.os import listdir
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove as aioremove
+from aiohttp import ClientSession
+from aioshutil import disk_usage
+from aioshutil import rmtree as aiormtree
+from magic import Magic
+
 from bot import (
+    ARIA_NAME,
+    DOWNLOAD_DIR,
+    FFMPEG_NAME,
+    LOGGER,
+    QBIT_NAME,
     aria2,
     config_dict,
     get_client,
-    DOWNLOAD_DIR,
-    LOGGER,
-    ARIA_NAME,
-    QBIT_NAME,
-    FFMPEG_NAME,
 )
-from bot.helper.ext_utils.bot_utils import sync_to_async, async_to_sync, cmd_exec
+from bot.helper.ext_utils.bot_utils import async_to_sync, cmd_exec, sync_to_async
 from bot.helper.ext_utils.exceptions import NotSupportedExtractionArchive
-
 
 ARCH_EXT = [
     ".tar.bz2",
@@ -130,10 +136,8 @@ async def clean_unwanted(path):
     LOGGER.info("Cleaning unwanted files/folders: %s", path)
     for dirpath, _, files in await sync_to_async(walk, path, topdown=False):
         for filee in files:
-            if (
-                filee.endswith(".!qB")
-                or filee.endswith(".parts")
-                and filee.startswith(".")
+            if filee.endswith(".!qB") or (
+                filee.endswith(".parts") and filee.startswith(".")
             ):
                 await clean_target(ospath.join(dirpath, filee))
         if (
@@ -172,7 +176,10 @@ async def check_storage_threshold(size: int, arch=False, alloc=False):
     )
     if not alloc:
         if not arch:
-            if await disk_usage(DOWNLOAD_DIR).free - size < STORAGE_THRESHOLD * 1024**3:
+            if (
+                await disk_usage(DOWNLOAD_DIR).free - size
+                < STORAGE_THRESHOLD * 1024**3
+            ):
                 return False
         elif (
             await disk_usage(DOWNLOAD_DIR).free - (size * 2)
@@ -188,17 +195,18 @@ async def check_storage_threshold(size: int, arch=False, alloc=False):
 
 
 def get_base_name(orig_path):
-    extension = next((ext for ext in ARCH_EXT if orig_path.lower().endswith(ext)), "")
+    extension = next(
+        (ext for ext in ARCH_EXT if orig_path.lower().endswith(ext)), ""
+    )
     if extension != "":
-        return re_split(f"{extension}$", orig_path, maxsplit=1, flags=I)[0]
+        return re_split(f"{extension}$", orig_path, maxsplit=1, flags=IGNORECASE)[0]
     raise NotSupportedExtractionArchive("File format not supported for extraction")
 
 
 def get_mime_type(file_path):
     mime = Magic(mime=True)
     mime_type = mime.from_file(file_path)
-    mime_type = mime_type or "text/plain"
-    return mime_type
+    return mime_type or "text/plain"
 
 
 async def downlod_content(url: str, name: str):

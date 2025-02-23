@@ -1,18 +1,19 @@
 from base64 import b64encode
+from re import findall as re_findall
+
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
-from re import findall as re_findall
 
 from bot import bot, config_dict, user_data
 from bot.helper.ext_utils.bot_utils import (
-    new_task,
-    sync_to_async,
     default_button,
     get_content_type,
+    new_task,
+    sync_to_async,
 )
 from bot.helper.ext_utils.commons_check import UseCheck
-from bot.helper.ext_utils.links_utils import is_media, get_url_name
+from bot.helper.ext_utils.links_utils import get_url_name, is_media
 from bot.helper.ext_utils.shortenurl import short_url
 from bot.helper.ext_utils.status_utils import get_readable_file_size
 from bot.helper.stream_utils.file_properties import gen_link
@@ -20,11 +21,11 @@ from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMarkup,
     auto_delete_message,
     copyMessage,
     deleteMessage,
+    editMarkup,
+    sendMessage,
 )
 
 
@@ -38,7 +39,9 @@ async def generate_ddl(_, message: Message):
     ):
         reply_to = message.reply_to_message
         supergroup = message.chat.type.name in ("SUPERGROUP", "CHANNEL")
-        user_id = message.from_user.id if message.from_user else message.sender_chat.id
+        user_id = (
+            message.from_user.id if message.from_user else message.sender_chat.id
+        )
         if fmsg := await UseCheck(message).run(forpremi=True, session=True):
             await auto_delete_message(message, fmsg, reply_to)
             return
@@ -51,10 +54,14 @@ async def generate_ddl(_, message: Message):
 
         if reply_to and is_file:
             cmsg = await copyMessage(config_dict["LEECH_LOG"], reply_to)
-            for mode, link in zip(["Stream", "Download"], await gen_link(cmsg)):
+            for mode, link in zip(
+                ["Stream", "Download"], await gen_link(cmsg), strict=False
+            ):
                 if link:
                     buttons.button_link(
-                        mode, await sync_to_async(short_url, link, user_id), "header"
+                        mode,
+                        await sync_to_async(short_url, link, user_id),
+                        "header",
                     )
             streams.append(True)
             cmsg = await editMarkup(cmsg, buttons.build_menu(2))
@@ -82,7 +89,7 @@ async def generate_ddl(_, message: Message):
                             get_url_name(link),
                             get_readable_file_size(size),
                             link,
-                        )
+                        ),
                     )
             if streams:
                 if len(streams) == 1:
@@ -113,7 +120,7 @@ async def generate_ddl(_, message: Message):
         ):
             await copyMessage(message.chat.id, cmsg)
         send_pm = user_data.get(user_id, {}).get("enable_pm")
-        if send_pm and is_file or send_pm and supergroup:
+        if (send_pm and is_file) or (send_pm and supergroup):
             markup = await default_button(cmsg) if save_message else None
             await copyMessage(user_id, cmsg, markup)
         if not no_data:
@@ -124,6 +131,7 @@ async def generate_ddl(_, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        generate_ddl, command(BotCommands.DdlsCommand) & CustomFilters.authorized
-    )
+        generate_ddl,
+        command(BotCommands.DdlsCommand) & CustomFilters.authorized,
+    ),
 )

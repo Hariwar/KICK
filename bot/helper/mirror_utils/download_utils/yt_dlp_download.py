@@ -1,32 +1,39 @@
 from __future__ import annotations
+
+import contextlib
 from ast import literal_eval
-from os import path as ospath, listdir
+from os import listdir
+from os import path as ospath
 from random import SystemRandom
 from re import search as re_search
 from string import ascii_letters, digits
-from yt_dlp import YoutubeDL, DownloadError
+from typing import TYPE_CHECKING
+
+from yt_dlp import DownloadError, YoutubeDL
 
 from bot import (
-    task_dict,
-    task_dict_lock,
+    FFMPEG_NAME,
+    LOGGER,
     non_queued_dl,
     queue_dict_lock,
-    LOGGER,
-    FFMPEG_NAME,
+    task_dict,
+    task_dict_lock,
 )
-from bot.helper.ext_utils.bot_utils import sync_to_async, async_to_sync
+from bot.helper.ext_utils.bot_utils import async_to_sync, sync_to_async
 from bot.helper.ext_utils.status_utils import get_readable_file_size
 from bot.helper.ext_utils.task_manager import (
+    check_limits_size,
     check_running_tasks,
     stop_duplicate_check,
-    check_limits_size,
 )
-from bot.helper.listeners import tasks_listener as task
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
 from bot.helper.mirror_utils.status_utils.yt_dlp_download_status import (
     YtDlpDownloadStatus,
 )
 from bot.helper.telegram_helper.message_utils import sendStatusMessage
+
+if TYPE_CHECKING:
+    from bot.helper.listeners import tasks_listener as task
 
 
 class MyLogger:
@@ -36,14 +43,17 @@ class MyLogger:
 
     def debug(self, msg):
         # Hack to fix changing extension
-        if not self._obj.is_playlist:
-            if match := re_search(
-                r".Merger..Merging formats into..(.*?).$", msg
-            ) or re_search(r".ExtractAudio..Destination..(.*?)$", msg):
-                LOGGER.info(msg)
-                newname = match.group(1)
-                newname = newname.rsplit("/", 1)[-1]
-                self._listener.name = newname
+        if not self._obj.is_playlist and (
+            match := re_search(
+                r".Merger..Merging formats into..(.*?).$",
+                msg,
+            )
+            or re_search(r".ExtractAudio..Destination..(.*?)$", msg)
+        ):
+            LOGGER.info(msg)
+            newname = match.group(1)
+            newname = newname.rsplit("/", 1)[-1]
+            self._listener.name = newname
 
     @staticmethod
     def warning(msg):
@@ -135,7 +145,8 @@ class YoutubeDLHelper:
                 self._last_downloaded = downloadedBytes
                 self._downloaded_bytes += chunk_size
                 self._playlist_index = d.get("info_dict", {}).get(
-                    "playlist_index", self._playlist_index
+                    "playlist_index",
+                    self._playlist_index,
                 )
             else:
                 if d.get("total_bytes"):
@@ -144,15 +155,15 @@ class YoutubeDLHelper:
                     self._size = d["total_bytes_estimate"]
                 self._downloaded_bytes = d["downloaded_bytes"]
                 self._eta = d.get("eta", "~") or "~"
-            try:
+            with contextlib.suppress(Exception):
                 self._progress = (self._downloaded_bytes / self._size) * 100
-            except:
-                pass
 
     async def _onDownloadStart(self, from_queue=False):
         async with task_dict_lock:
             task_dict[self._listener.mid] = YtDlpDownloadStatus(
-                self._listener, self, self._gid
+                self._listener,
+                self,
+                self._gid,
             )
         if not from_queue:
             await self._listener.onDownloadStart()
@@ -187,7 +198,7 @@ class YoutubeDLHelper:
                     if not self._listener.name:
                         outtmpl_ = "%(series,playlist_title,channel)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d.%(ext)s"
                         self._listener.name, ext = ospath.splitext(
-                            ydl.prepare_filename(entry, outtmpl=outtmpl_)
+                            ydl.prepare_filename(entry, outtmpl=outtmpl_),
                         )
                         if not self._ext:
                             self._ext = ext
@@ -196,7 +207,9 @@ class YoutubeDLHelper:
                 realName = ydl.prepare_filename(result, outtmpl=outtmpl_)
                 ext = ospath.splitext(realName)[-1]
                 self._listener.name = (
-                    f"{self._listener.name}{ext}" if self._listener.name else realName
+                    f"{self._listener.name}{ext}"
+                    if self._listener.name
+                    else realName
                 )
                 if not self._ext:
                     self._ext = ext
@@ -219,7 +232,7 @@ class YoutubeDLHelper:
                 not ospath.exists(path) or len(listdir(path)) == 0
             ):
                 self._onDownloadError(
-                    "No video available to download from this playlist. Check logs for more details"
+                    "No video available to download from this playlist. Check logs for more details",
                 )
                 return
             if self._is_cancelled:
@@ -244,7 +257,7 @@ class YoutubeDLHelper:
                 "add_infojson": "if_exists",
                 "add_metadata": True,
                 "key": "FFmpegMetadata",
-            }
+            },
         ]
         if qual.startswith("ba/b-"):
             audio_info = qual.split("-")
@@ -256,7 +269,7 @@ class YoutubeDLHelper:
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": audio_format,
                     "preferredquality": rate,
-                }
+                },
             )
             if audio_format == "vorbis":
                 self._ext = ".ogg"
@@ -316,7 +329,7 @@ class YoutubeDLHelper:
                     "format": "jpg",
                     "key": "FFmpegThumbnailsConvertor",
                     "when": "before_dl",
-                }
+                },
             )
         if self._ext in [
             ".mp3",
@@ -334,7 +347,7 @@ class YoutubeDLHelper:
                 {
                     "already_have_thumbnail": self._listener.isLeech,
                     "key": "EmbedThumbnail",
-                }
+                },
             )
         elif not self._listener.isLeech:
             self.opts["writethumbnail"] = False
@@ -344,11 +357,16 @@ class YoutubeDLHelper:
             self._listener.name = name
             LOGGER.info("File/folder already in Drive!")
             self._is_cancelled = True
-            await self._listener.onDownloadError("File/folder already in Drive!", file)
+            await self._listener.onDownloadError(
+                "File/folder already in Drive!", file
+            )
             return
 
         if msg := await check_limits_size(
-            self._listener, self._size, self.is_playlist, self._playlist_count
+            self._listener,
+            self._size,
+            self.is_playlist,
+            self._playlist_count,
         ):
             if "Only" not in msg:
                 LOGGER.info("File/folder size over the limit size!")
@@ -362,7 +380,10 @@ class YoutubeDLHelper:
             LOGGER.info("Added to Queue/Download: %s", self._listener.name)
             async with task_dict_lock:
                 task_dict[self._listener.mid] = QueueStatus(
-                    self._listener, self._size, self._gid, "dl"
+                    self._listener,
+                    self._size,
+                    self._gid,
+                    "dl",
                 )
             await event.wait()
             async with task_dict_lock:
@@ -398,7 +419,9 @@ class YoutubeDLHelper:
                 value = True
             elif value.lower() == "false":
                 value = False
-            elif value.startswith(("{", "[", "(")) and value.endswith(("}", "]", ")")):
+            elif value.startswith(("{", "[", "(")) and value.endswith(
+                ("}", "]", ")")
+            ):
                 value = literal_eval(value)
 
             if key == "postprocessors":

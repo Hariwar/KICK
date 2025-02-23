@@ -1,25 +1,27 @@
-from aiofiles import open as aiopen
-from aiohttp import ClientSession
+import contextlib
 from ast import literal_eval
-from asyncio import gather, wait_for, Event, wrap_future
-from html import escape
-from pyrogram import Client
-from pyrogram.filters import command, regex, user, text
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Message, CallbackQuery
-from time import time
+from asyncio import Event, gather, wait_for, wrap_future
 from functools import partial
+from html import escape
+from time import time
 from urllib.parse import quote
 
-from bot import bot, config_dict, get_client, LOGGER
-from bot.helper.ext_utils.bot_utils import sync_to_async, new_task, new_thread
+from aiofiles import open as aiopen
+from aiohttp import ClientSession
+from pyrogram import Client
+from pyrogram.filters import command, regex, text, user
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+from pyrogram.types import CallbackQuery, Message
+
+from bot import LOGGER, bot, config_dict, get_client
+from bot.helper.ext_utils.bot_utils import new_task, new_thread, sync_to_async
 from bot.helper.ext_utils.commons_check import UseCheck
 from bot.helper.ext_utils.html_helper import html_template
 from bot.helper.ext_utils.status_utils import (
+    action,
+    get_date_time,
     get_readable_file_size,
     get_readable_time,
-    get_date_time,
-    action,
 )
 from bot.helper.ext_utils.telegram_helper import TeleContent
 from bot.helper.ext_utils.telegraph_helper import telegraph
@@ -27,14 +29,13 @@ from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    editMessage,
-    sendMessage,
-    deleteMessage,
-    sendFile,
     auto_delete_message,
+    deleteMessage,
+    editMessage,
+    sendFile,
     sendingMessage,
+    sendMessage,
 )
-
 
 TELEGRAPH_LIMIT = 300
 PLUGINS = []
@@ -53,7 +54,9 @@ async def initiate_search_tools():
         await sync_to_async(qbclient.search_install_plugin, src_plugins)
     elif qb_plugins:
         for plugin in qb_plugins:
-            await sync_to_async(qbclient.search_uninstall_plugin, names=plugin["name"])
+            await sync_to_async(
+                qbclient.search_uninstall_plugin, names=plugin["name"]
+            )
         globals()["PLUGINS"] = []
     await sync_to_async(qbclient.auth_log_out)
     if SEARCH_API_LINK := config_dict["SEARCH_API_LINK"]:
@@ -77,7 +80,11 @@ async def initiate_search_tools():
 
 
 async def getResult(
-    search_results: list, key: str, message: Message, method: str, style: str
+    search_results: list,
+    key: str,
+    message: Message,
+    method: str,
+    style: str,
 ):
     TSEARCH_TITLE = config_dict["TSEARCH_TITLE"]
     if style in ("tele", "graph"):
@@ -96,35 +103,29 @@ async def getResult(
         for index, result in enumerate(search_results, start=1):
             if method.startswith("api"):
                 try:
-                    if "name" in result.keys():
+                    if "name" in result:
                         if style == "tele":
                             msg += f"<a href='{result['url']}'>{escape(result['name'])}</a><br>"
                         else:
                             msg += f"<code><a href='{result['url']}'>{escape(result['name'])}</a></code><br>"
-                    if "torrents" in result.keys():
+                    if "torrents" in result:
                         for subres in result["torrents"]:
                             msg += (
                                 f"<b>Quality: </b>{subres['quality']} | <b>Type: </b>{subres['type']} | "
                                 f"<b>Size: </b>{subres['size']}<br>"
                             )
-                            if "torrent" in subres.keys():
-                                msg += (
-                                    f"<a href='{subres['torrent']}'>Direct Link</a><br>"
-                                )
-                            elif "magnet" in subres.keys():
+                            if "torrent" in subres:
+                                msg += f"<a href='{subres['torrent']}'>Direct Link</a><br>"
+                            elif "magnet" in subres:
                                 msg += "<b>Share Magnet to</b><a href='http://t.me/share/url?url={subres['magnet']}'>Telegram</a><br>"
                         msg += "<br>"
                     else:
                         msg += f"<b>Size: </b>{result['size']}<br>"
-                        try:
+                        with contextlib.suppress(Exception):
                             msg += f"<b>Seeders: </b>{result['seeders']} | <b>Leechers: </b>{result['leechers']}<br>"
-                        except:
-                            pass
-                        if "torrent" in result.keys():
-                            msg += (
-                                f"<a href='{result['torrent']}'>Direct Link</a><br><br>"
-                            )
-                        elif "magnet" in result.keys():
+                        if "torrent" in result:
+                            msg += f"<a href='{result['torrent']}'>Direct Link</a><br><br>"
+                        elif "magnet" in result:
                             msg += "<b>Share Magnet to</b><a href='http://t.me/share/url?url={quote(result['magnet'])}'>Telegram</a><br><br>"
                         else:
                             msg += "<br>"
@@ -143,7 +144,9 @@ async def getResult(
                     msg += f"<a href='{link}'>Direct Link</a><br><br>"
 
             if style == "tele":
-                contents.append(str(index).zfill(3) + ". " + msg.replace("<br>", "\n"))
+                contents.append(
+                    str(index).zfill(3) + ". " + msg.replace("<br>", "\n")
+                )
                 msg = ""
             elif len(msg.encode("utf-8")) > 39000:
                 contents.append(msg)
@@ -159,7 +162,8 @@ async def getResult(
             contents.append(msg)
 
         await editMessage(
-            f"<i>Creating {len(contents)} telegraph pages...</i>", message
+            f"<i>Creating {len(contents)} telegraph pages...</i>",
+            message,
         )
         path = [
             (await telegraph.create_page(TSEARCH_TITLE, content))["path"]
@@ -168,7 +172,8 @@ async def getResult(
         if len(path) > 1:
             await gather(
                 editMessage(
-                    f"<i>Editing {len(contents)} telegraph pages...</i>", message
+                    f"<i>Editing {len(contents)} telegraph pages...</i>",
+                    message,
                 ),
                 telegraph.edit_telegraph(path, contents),
             )
@@ -201,13 +206,11 @@ async def getResult(
                     msg += "<br>"
                 else:
                     msg += f"<span class='topmarginsm'><b>Size: </b>{result['size']}</span>"
-                    try:
+                    with contextlib.suppress(Exception):
                         msg += (
                             f"<span class='topmarginsm'><b>Seeders: </b>{result['seeders']} | "
                             "<b>Leechers: </b>{result['leechers']}</span>"
                         )
-                    except:
-                        pass
                     if "torrent" in result:
                         msg += "<span class='topmarginxl'><a class='withhover' href='{result['torrent']}'>Direct Link</a></span>"
                     elif "magnet" in result:
@@ -253,7 +256,8 @@ class TorSeacrh:
         pfunc = partial(torsearch_upadte, obj=self)
         handler = self._client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^torser") & user(self._message.from_user.id)
+                pfunc,
+                filters=regex("^torser") & user(self._message.from_user.id),
             ),
             group=-1,
         )
@@ -315,9 +319,7 @@ class TorSeacrh:
                 case "apirecent":
                     LOGGER.info("API Recent from %s", self.site)
                     if self.site == "all":
-                        api = (
-                            f"{SEARCH_API_LINK}/api/v1/all/recent?limit={SEARCH_LIMIT}"
-                        )
+                        api = f"{SEARCH_API_LINK}/api/v1/all/recent?limit={SEARCH_LIMIT}"
                     else:
                         api = f"{SEARCH_API_LINK}/api/v1/recent?site={self.site}&limit={SEARCH_LIMIT}"
             try:
@@ -376,13 +378,16 @@ class TorSeacrh:
             search_id = search.id
             while True:
                 result_status = await sync_to_async(
-                    client.search_status, search_id=search_id
+                    client.search_status,
+                    search_id=search_id,
                 )
                 status = result_status[0].status
                 if status != "Running":
                     break
             dict_search_results = await sync_to_async(
-                client.search_results, search_id=search_id, limit=TELEGRAPH_LIMIT
+                client.search_results,
+                search_id=search_id,
+                limit=TELEGRAPH_LIMIT,
             )
             search_results = dict_search_results.results
             total_results = dict_search_results.total
@@ -412,23 +417,28 @@ class TorSeacrh:
 
         cur_content: dict = self.content.get(self.query, {})
         if (saved_content := cur_content.get("data")) and cur_content.get(
-            "mode"
+            "mode",
         ) == self.mode:
             hmsg = saved_content
         else:
             hmsg = await getResult(
-                search_results, self.query, self._reply_to, self.method, self.style
+                search_results,
+                self.query,
+                self._reply_to,
+                self.method,
+                self.style,
             )
         self.content.setdefault(self.query, {})
         self.content.update(
-            {self.query: {"data": hmsg, "style": self.style, "cap": cap}}
+            {self.query: {"data": hmsg, "style": self.style, "cap": cap}},
         )
 
         match self.style:
             case "tele":
                 self.tele_list.set_data(hmsg, cap)
                 text, buttons = await self.tele_list.get_content(
-                    "torser", extra_buttons=[("Change Query", "change")]
+                    "torser",
+                    extra_buttons=[("Change Query", "change")],
                 )
                 await self.send_list_message(text, buttons)
             case "graph":
@@ -450,8 +460,9 @@ class TorSeacrh:
                 async with aiopen(name, "w", encoding="utf-8") as f:
                     await f.write(
                         html_template.replace("{msg}", hmsg).replace(
-                            "{title}", f"{self.method}_{self.query}_{self.site}"
-                        )
+                            "{title}",
+                            f"{self.method}_{self.query}_{self.site}",
+                        ),
                     )
                 await gather(
                     sendFile(self._message, name, cap, config_dict["IMAGE_HTML"]),
@@ -462,7 +473,8 @@ class TorSeacrh:
             and config_dict["AUTO_DELETE_UPLOAD_MESSAGE_DURATION"]
         ):
             await auto_delete_message(
-                self._message, stime=config_dict["AUTO_DELETE_UPLOAD_MESSAGE_DURATION"]
+                self._message,
+                stime=config_dict["AUTO_DELETE_UPLOAD_MESSAGE_DURATION"],
             )
 
     async def _generate_buttons(self, no_button=False):
@@ -482,7 +494,9 @@ class TorSeacrh:
                         PLUGINS.append(name["name"])
                     await sync_to_async(qbclient.auth_log_out)
                 for siteName in PLUGINS:
-                    buttons.button_data(siteName.title(), f"torser {siteName} plugin")
+                    buttons.button_data(
+                        siteName.title(), f"torser {siteName} plugin"
+                    )
                 buttons.button_data("All", "torser all plugin")
                 if SITES and SEARCH_PLUGINS:
                     buttons.button_data("<<", "torser dualmode")
@@ -502,7 +516,8 @@ class TorSeacrh:
                     buttons.button_data(name, f"torser {data} {self.method}")
                 if SITES and SEARCH_PLUGINS:
                     buttons.button_data(
-                        "<<", f"torser {'dualmode' if self.query else 'noargs'}"
+                        "<<",
+                        f"torser {'dualmode' if self.query else 'noargs'}",
                     )
             buttons.button_data("Cancel", "torser cancel")
         return (
@@ -538,7 +553,9 @@ class TorSeacrh:
                     msg = f"<i>Searching for <b>{self.query.title()}</b> in {SITES.get(self.site).title()} with {type_dict[self.style]}...</i>"
             else:
                 msg = f"<i>Searching for <b>{self.query.title()}</b> in {self.site.title()} with {type_dict[self.style]}...</i>"
-        elif SEARCH_PLUGINS and not SITES and self.query or self.method == "plugin":
+        elif (
+            SEARCH_PLUGINS and not SITES and self.query
+        ) or self.method == "plugin":
             self.method, msg = (
                 "plugin",
                 f"{self._tag}, Choose Site to Search (Plugin Mode) <b>{self.query.title()}</b>",
@@ -573,7 +590,9 @@ class TorSeacrh:
         await gather(self.list_buttons(), wrap_future(self._event_handler()))
         if self.is_cancelled == "close":
             await deleteMessage(
-                self._message, self._message.reply_to_message, self._reply_to
+                self._message,
+                self._message.reply_to_message,
+                self._reply_to,
             )
 
 
@@ -595,7 +614,8 @@ async def torsearch_upadte(_, query: CallbackQuery, obj: TorSeacrh):
         if (cur_content := obj.content.get(obj.query)) and obj.style == "tele":
             obj.tele_list.set_data(cur_content["data"], cur_content["cap"])
             text, buttons = await obj.tele_list.get_content(
-                "torser", extra_buttons=[("Change Query", "change")]
+                "torser",
+                extra_buttons=[("Change Query", "change")],
             )
             await obj.send_list_message(text, buttons)
             return
@@ -620,7 +640,10 @@ async def torsearch_upadte(_, query: CallbackQuery, obj: TorSeacrh):
     elif data[2] in ["pre", "nex", "foot"]:
         tdata = int(data[4]) if data[2] == "foot" else int(data[3])
         text, buttons = await obj.tele_list.get_content(
-            "torser", data[2], tdata, [("Change Query", "change")]
+            "torser",
+            data[2],
+            tdata,
+            [("Change Query", "change")],
         )
         if not buttons:
             await query.answer(text, True)
@@ -660,5 +683,5 @@ bot.add_handler(
     MessageHandler(
         torrentSearch,
         filters=command(BotCommands.SearchCommand) & CustomFilters.authorized,
-    )
+    ),
 )

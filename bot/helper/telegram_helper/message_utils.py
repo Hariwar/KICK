@@ -1,29 +1,31 @@
-from asyncio import sleep, gather
+from asyncio import gather, sleep
 from functools import wraps
-from pyrogram import Client
+from re import findall as re_findall
+from re import match as re_match
+from time import time
+from typing import TYPE_CHECKING
+
 from pyrogram.errors import (
     FloodWait,
-    UserBlocked,
-    UserDeactivatedBan,
-    UserDeactivated,
-    UserIsBlocked,
     InputUserDeactivated,
+    UserBlocked,
+    UserDeactivated,
+    UserDeactivatedBan,
+    UserIsBlocked,
 )
-from pyrogram.types import Message, InlineKeyboardMarkup, InputMediaPhoto
-from re import match as re_match, findall as re_findall
-from time import time
+from pyrogram.types import InlineKeyboardMarkup, InputMediaPhoto, Message
 
 from bot import (
+    DATABASE_URL,
+    LOGGER,
+    Intervals,
     bot,
     bot_dict,
     bot_lock,
     bot_loop,
-    Intervals,
     config_dict,
-    task_dict_lock,
     status_dict,
-    DATABASE_URL,
-    LOGGER,
+    task_dict_lock,
 )
 from bot.helper.ext_utils.bot_utils import setInterval, sync_to_async
 from bot.helper.ext_utils.db_handler import DbManager
@@ -31,6 +33,9 @@ from bot.helper.ext_utils.exceptions import TgLinkException
 from bot.helper.ext_utils.files_utils import clean_target, downlod_content
 from bot.helper.ext_utils.status_utils import get_readable_message
 from bot.helper.telegram_helper.bot_commands import BotCommands
+
+if TYPE_CHECKING:
+    from pyrogram import Client
 
 
 class Limits:
@@ -86,7 +91,10 @@ def handle_message(func):
 
 
 async def sendingMessage(
-    text: str, message: Message, photo, reply_markup: InlineKeyboardMarkup = None
+    text: str,
+    message: Message,
+    photo,
+    reply_markup: InlineKeyboardMarkup = None,
 ):
     return (
         await sendPhoto(text, message, photo, reply_markup)
@@ -97,7 +105,10 @@ async def sendingMessage(
 
 @handle_message
 async def sendMessage(
-    text: str, message: Message, reply_markup: InlineKeyboardMarkup = None, block=True
+    text: str,
+    message: Message,
+    reply_markup: InlineKeyboardMarkup = None,
+    block=True,
 ):
     return await message.reply_text(
         limit.text(text),
@@ -126,13 +137,16 @@ async def sendMedia(
 @handle_message
 async def sendSticker(fileid: str, message: Message, is_misc=False):
     msgsticker = await message.reply_sticker(
-        fileid, quote=True, disable_notification=True
+        fileid,
+        quote=True,
+        disable_notification=True,
     )
     if not is_misc and config_dict["STICKER_DELETE_DURATION"]:
         bot_loop.create_task(
             auto_delete_message(
-                msgsticker, stime=config_dict["STICKER_DELETE_DURATION"]
-            )
+                msgsticker,
+                stime=config_dict["STICKER_DELETE_DURATION"],
+            ),
         )
 
 
@@ -144,7 +158,10 @@ async def sendCustom(
     nolog=False,
 ):
     return await bot.send_message(
-        chat_id, limit.text(text), reply_markup=reply_markup, disable_notification=True
+        chat_id,
+        limit.text(text),
+        reply_markup=reply_markup,
+        disable_notification=True,
     )
 
 
@@ -161,10 +178,15 @@ async def editCustom(text: str, chat_id: int, message_id: int, reply_markup=None
 
 @handle_message
 async def editMessage(
-    text: str, message: Message, reply_markup: InlineKeyboardMarkup = None, block=True
+    text: str,
+    message: Message,
+    reply_markup: InlineKeyboardMarkup = None,
+    block=True,
 ):
     return await message.edit_text(
-        limit.text(text), reply_markup=reply_markup, disable_web_page_preview=True
+        limit.text(text),
+        reply_markup=reply_markup,
+        disable_web_page_preview=True,
     )
 
 
@@ -179,13 +201,18 @@ async def copyMessage(
         if (markup := message.reply_markup) and markup.inline_keyboard:
             reply_markup = markup
     return await message.copy(
-        chat_id, disable_notification=True, reply_markup=reply_markup
+        chat_id,
+        disable_notification=True,
+        reply_markup=reply_markup,
     )
 
 
 @handle_message
 async def sendPhoto(
-    caption: str, message: Message, photo, reply_markup: InlineKeyboardMarkup = None
+    caption: str,
+    message: Message,
+    photo,
+    reply_markup: InlineKeyboardMarkup = None,
 ):
     return await message.reply_photo(
         photo,
@@ -198,10 +225,14 @@ async def sendPhoto(
 
 @handle_message
 async def editPhoto(
-    caption: str, message: Message, photo, reply_markup: InlineKeyboardMarkup = None
+    caption: str,
+    message: Message,
+    photo,
+    reply_markup: InlineKeyboardMarkup = None,
 ):
     return await message.edit_media(
-        InputMediaPhoto(photo, limit.caption(caption)), reply_markup
+        InputMediaPhoto(photo, limit.caption(caption)),
+        reply_markup,
     )
 
 
@@ -221,14 +252,19 @@ async def sendFile(message: Message, doc: str, caption: str = "", thumb=None):
     if thumb and await downlod_content(thumb, "thumb.png"):
         thumbnail = "thumb.png"
     await message.reply_document(
-        doc, caption=limit.caption(caption), quote=True, thumb=thumbnail
+        doc,
+        caption=limit.caption(caption),
+        quote=True,
+        thumb=thumbnail,
     )
     await gather(
-        *[clean_target(file) for file in [doc, "thumb.png"] if file != "log.txt"]
+        *[clean_target(file) for file in [doc, "thumb.png"] if file != "log.txt"],
     )
 
 
-async def auto_delete_message(*args, stime=config_dict["AUTO_DELETE_MESSAGE_DURATION"]):
+async def auto_delete_message(
+    *args, stime=config_dict["AUTO_DELETE_MESSAGE_DURATION"]
+):
     if stime:
         await sleep(stime)
         await deleteMessage(*args)
@@ -249,12 +285,14 @@ async def get_tg_link_message(link: str, user_id: int):
     if link.startswith("https://t.me/"):
         private = False
         msg = re_match(
-            r"https:\/\/t\.me\/(?:c\/)?([^\/]+)(?:\/[^\/]+)?\/([0-9-]+)", link
+            r"https:\/\/t\.me\/(?:c\/)?([^\/]+)(?:\/[^\/]+)?\/([0-9-]+)",
+            link,
         )
     else:
         private = True
         msg = re_match(
-            r"tg:\/\/openmessage\?user_id=([0-9]+)&message_id=([0-9-]+)", link
+            r"tg:\/\/openmessage\?user_id=([0-9]+)&message_id=([0-9-]+)",
+            link,
         )
     chat, msg_id = msg.group(1), msg.group(2)
     async with bot_lock:
@@ -289,10 +327,12 @@ async def get_tg_link_message(link: str, user_id: int):
         private = True
         if not userbot:
             raise TgLinkException(
-                f"User session required for this private link! Try add user session /{BotCommands.UserSetCommand}"
+                f"User session required for this private link! Try add user session /{BotCommands.UserSetCommand}",
             )
     if private:
-        if (message := await userbot.get_messages(chat, msg_id)) and not message.empty:
+        if (
+            message := await userbot.get_messages(chat, msg_id)
+        ) and not message.empty:
             return (userbot, links) if links else (userbot, message)
         raise TgLinkException("Mostly message has been deleted!")
     if (
@@ -309,7 +349,7 @@ async def get_tg_link_message(link: str, user_id: int):
         return (bot, links) if links else (bot, message)
     raise TgLinkException(
         "Failed getting data from link. Mostly message has been deleted or member chat required"
-        + (f" try /{BotCommands.JoinChatCommand}!" if userbot == save_bot else "!")
+        + (f" try /{BotCommands.JoinChatCommand}!" if userbot == save_bot else "!"),
     )
 
 
@@ -328,7 +368,12 @@ async def update_status_message(sid, force=False):
         is_user = status_dict[sid]["is_user"]
         page_step = status_dict[sid]["page_step"]
         text, buttons = await sync_to_async(
-            get_readable_message, sid, is_user, page_no, status, page_step
+            get_readable_message,
+            sid,
+            is_user,
+            page_no,
+            status,
+            page_step,
         )
         if text is None:
             del status_dict[sid]
@@ -364,7 +409,12 @@ async def sendStatusMessage(msg, user_id=0):
             status = status_dict[sid]["status"]
             page_step = status_dict[sid]["page_step"]
             text, buttons = await sync_to_async(
-                get_readable_message, sid, is_user, page_no, status, page_step
+                get_readable_message,
+                sid,
+                is_user,
+                page_no,
+                status,
+                page_step,
             )
             if text is None:
                 del status_dict[sid]
@@ -374,11 +424,14 @@ async def sendStatusMessage(msg, user_id=0):
                 return
             message = status_dict[sid]["message"]
             _, message = await gather(
-                deleteMessage(message), sendMessage(text, msg, buttons, block=False)
+                deleteMessage(message),
+                sendMessage(text, msg, buttons, block=False),
             )
             if isinstance(message, str):
                 LOGGER.error(
-                    "Status with id: %s haven't been updated. Error: %s", sid, message
+                    "Status with id: %s haven't been updated. Error: %s",
+                    sid,
+                    message,
                 )
                 return
             message.text = text
@@ -390,7 +443,9 @@ async def sendStatusMessage(msg, user_id=0):
             message = await sendMessage(text, msg, buttons, block=False)
             if isinstance(message, str):
                 LOGGER.error(
-                    "Status with id: %s haven't been updated. Error: %s", sid, message
+                    "Status with id: %s haven't been updated. Error: %s",
+                    sid,
+                    message,
                 )
                 return
             message.text = text
@@ -404,5 +459,7 @@ async def sendStatusMessage(msg, user_id=0):
             }
     if not Intervals["status"].get(sid):
         Intervals["status"][sid] = setInterval(
-            config_dict["STATUS_UPDATE_INTERVAL"], update_status_message, sid
+            config_dict["STATUS_UPDATE_INTERVAL"],
+            update_status_message,
+            sid,
         )

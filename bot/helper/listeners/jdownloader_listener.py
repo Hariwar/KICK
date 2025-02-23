@@ -1,7 +1,7 @@
 from asyncio import sleep
 
-from bot import Intervals, jd_lock, jd_downloads
-from bot.helper.ext_utils.bot_utils import new_task, sync_to_async, retry_function
+from bot import Intervals, jd_downloads, jd_lock
+from bot.helper.ext_utils.bot_utils import new_task, retry_function, sync_to_async
 from bot.helper.ext_utils.jdownloader_booter import jdownloader
 from bot.helper.ext_utils.status_utils import getTaskByGid
 
@@ -39,7 +39,8 @@ async def _jd_listener():
                 break
             try:
                 packages = await sync_to_async(
-                    jdownloader.device.downloads.query_packages, [{"finished": True}]
+                    jdownloader.device.downloads.query_packages,
+                    [{"finished": True}],
                 )
             except:
                 continue

@@ -1,7 +1,7 @@
 from asyncio import sleep
 from time import time
 
-from bot import QbTorrents, qb_listener_lock, get_client, LOGGER
+from bot import LOGGER, QbTorrents, get_client, qb_listener_lock
 from bot.helper.ext_utils.bot_utils import sync_to_async
 from bot.helper.ext_utils.status_utils import (
     MirrorStatus,
@@ -34,8 +34,10 @@ class QbittorrentStatus:
     def _update(self, attempt=0):
         if new_info := get_download(self.client, f"{self.listener.mid}"):
             self._info = new_info
-        elif attempt < 3:
+            return None
+        if attempt < 3:
             return self._update(attempt + 1)
+        return None
 
     def elapsed(self):
         return get_readable_time(time() - self._elapsed)
@@ -107,7 +109,9 @@ class QbittorrentStatus:
 
     async def cancel_task(self):
         await sync_to_async(self._update)
-        await sync_to_async(self.client.torrents_pause, torrent_hashes=self._info.hash)
+        await sync_to_async(
+            self.client.torrents_pause, torrent_hashes=self._info.hash
+        )
         if not self.seeding:
             if self.queued:
                 LOGGER.info("Cancelling QueueDL: %s", self.name())
@@ -122,6 +126,8 @@ class QbittorrentStatus:
                 torrent_hashes=self._info.hash,
                 delete_files=True,
             )
-            await sync_to_async(self.client.torrents_delete_tags, tags=self._info.tags)
+            await sync_to_async(
+                self.client.torrents_delete_tags, tags=self._info.tags
+            )
             async with qb_listener_lock:
                 QbTorrents.pop(self._info.tags, None)

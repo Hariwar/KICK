@@ -1,32 +1,33 @@
 from asyncio import gather
-from psutil import cpu_percent, virtual_memory, disk_usage, net_io_counters
-from pyrogram.filters import command, regex
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Message, CallbackQuery
 from time import time
 
+from psutil import cpu_percent, disk_usage, net_io_counters, virtual_memory
+from pyrogram.filters import command, regex
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+from pyrogram.types import CallbackQuery, Message
+
 from bot import (
+    Intervals,
     bot,
+    botStartTime,
+    config_dict,
+    status_dict,
     task_dict,
     task_dict_lock,
-    status_dict,
-    botStartTime,
-    Intervals,
-    config_dict,
 )
 from bot.helper.ext_utils.bot_utils import new_task
 from bot.helper.ext_utils.status_utils import (
+    MirrorStatus,
     get_readable_file_size,
     get_readable_time,
-    MirrorStatus,
 )
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    deleteMessage,
     auto_delete_message,
-    sendStatusMessage,
+    deleteMessage,
     sendingMessage,
+    sendStatusMessage,
     update_status_message,
 )
 
@@ -152,6 +153,6 @@ bot.add_handler(
     MessageHandler(
         mirror_status,
         filters=command(BotCommands.StatusCommand) & CustomFilters.authorized,
-    )
+    ),
 )
 bot.add_handler(CallbackQueryHandler(status_pages, filters=regex("^status")))

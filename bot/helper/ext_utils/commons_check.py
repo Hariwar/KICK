@@ -1,16 +1,17 @@
 from asyncio import gather
-from pyrogram.errors import UserDeactivated
-from pyrogram.types import Message
 from time import time
 from uuid import uuid4
 
-from bot import bot_loop, bot_name, task_dict, task_dict_lock, config_dict, user_data
+from pyrogram.errors import UserDeactivated
+from pyrogram.types import Message
+
+from bot import bot_loop, bot_name, config_dict, task_dict, task_dict_lock, user_data
 from bot.helper.ext_utils.bot_utils import (
+    UserDaily,
     get_user_task,
     is_premium_user,
-    update_user_ldata,
     sync_to_async,
-    UserDaily,
+    update_user_ldata,
 )
 from bot.helper.ext_utils.shortenurl import short_url
 from bot.helper.ext_utils.status_utils import get_readable_time
@@ -65,11 +66,13 @@ class UseCheck:
 
         if msgs:
             return await sendingMessage(
-                f"Hey there {self._message.from_user.mention}...\n\n" + "\n".join(msgs),
+                f"Hey there {self._message.from_user.mention}...\n\n"
+                + "\n".join(msgs),
                 self._message,
                 config_dict["IMAGE_COMMONS_CHECK"],
                 buttons.build_menu(2),
             )
+        return None
 
     async def _send_pm(self, buttons):
         try:
@@ -87,8 +90,13 @@ class UseCheck:
                 return "⁍ Set username: Go to <b>Settings</b> -> <b>My Account</b> -> <b>Username</b>."
             if self._user_dict.get("user_name", "") != uname:
                 await update_user_ldata(
-                    self._uid, "user_name", self._message.from_user.username
+                    self._uid,
+                    "user_name",
+                    self._message.from_user.username,
                 )
+                return None
+            return None
+        return None
 
     def _check_ml(self):
         if mode := str(config_dict["DISABLE_MIRROR_LEECH"]):
@@ -96,10 +104,13 @@ class UseCheck:
                 return "⁍ Mirror mode has been disabled!"
             if mode == "leech" and self._is_leech:
                 return "⁍ Leech mode has been disabled!"
+            return None
+        return None
 
     def _check_premium(self):
         if config_dict["PREMIUM_MODE"] and not self.isPremi:
             return "⁍ Feature only for <b>Premium User</b>!"
+        return None
 
     async def _daily_limit(self):
         if (
@@ -108,15 +119,14 @@ class UseCheck:
             and await UserDaily(self._uid).get_daily_limit()
         ):
             return f"⁍ Reach daily limit: ({config_dict['DAILY_LIMIT_SIZE']}GB), check ur status in /{BotCommands.UserSetCommand}"
+        return None
 
     async def _check_session(self, buttons):
         if SESSION_TIMEOUT := config_dict["SESSION_TIMEOUT"]:
             if (
-                config_dict["PREMIUM_MODE"]
-                and self.isPremi
-                or await CustomFilters.sudo("", self._message)
-            ):
-                return
+                config_dict["PREMIUM_MODE"] and self.isPremi
+            ) or await CustomFilters.sudo("", self._message):
+                return None
             user_dict = user_data.get(self._uid, {})
             if (
                 not (expire := user_dict.get("session_time"))
@@ -133,10 +143,13 @@ class UseCheck:
                 buttons.button_link(
                     "Get Session",
                     await sync_to_async(
-                        short_url, f"https://t.me/{bot_name}?start={token}"
+                        short_url,
+                        f"https://t.me/{bot_name}?start={token}",
                     ),
                 )
                 return f"⁍ Session is exipred (renew every {get_readable_time(SESSION_TIMEOUT)}</i>)."
+            return None
+        return None
 
     async def _check_limit(self):
         if (
@@ -161,7 +174,8 @@ class UseCheck:
         if config_dict["FSUB"]:
             try:
                 await self._message._client.get_chat_member(
-                    config_dict["FSUB_CHANNEL_ID"], self._uid
+                    config_dict["FSUB_CHANNEL_ID"],
+                    self._uid,
                 )
             except:
                 CHANNEL_USERNAME = config_dict["CHANNEL_USERNAME"]
@@ -170,6 +184,7 @@ class UseCheck:
                     f"https://t.me/{CHANNEL_USERNAME}",
                 )
                 return f"⁍ You must join <a href='https://t.me/{CHANNEL_USERNAME}'>{CHANNEL_USERNAME}</a>."
+        return None
 
     async def _task_limiter(self):
         if not self.isPremi:
@@ -181,3 +196,6 @@ class UseCheck:
                     total_tasks = len(task_dict)
                 if total_tasks >= TOTAL_TASKS_LIMIT:
                     return f"⁍ Reached total task limit: {TOTAL_TASKS_LIMIT} task!"
+                return None
+            return None
+        return None

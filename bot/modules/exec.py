@@ -1,21 +1,23 @@
-from aiofiles import open as aiopen
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, suppress
 from io import StringIO
-from os import path as ospath, getcwd, chdir
-from pyrogram.filters import command
-from pyrogram.handlers import MessageHandler
-from pyrogram.types import Message
+from os import chdir, getcwd
+from os import path as ospath
 from textwrap import indent
 from traceback import format_exc
 
-from bot import bot, config_dict, LOGGER
-from bot.helper.ext_utils.bot_utils import sync_to_async, new_task
+from aiofiles import open as aiopen
+from pyrogram.filters import command
+from pyrogram.handlers import MessageHandler
+from pyrogram.types import Message
+
+from bot import LOGGER, bot, config_dict
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
     auto_delete_message,
     sendFile,
+    sendMessage,
 )
 
 namespaces = {}
@@ -46,7 +48,9 @@ async def send(msg, message):
     if len(str(msg)) > 2000:
         async with aiopen("output.txt", "w", encoding="utf-8") as f:
             await f.write(msg)
-        await sendFile(message, "output.txt", "Eval output", config_dict["IMAGE_TXT"])
+        await sendFile(
+            message, "output.txt", "Eval output", config_dict["IMAGE_TXT"]
+        )
     else:
         LOGGER.info("OUT: '%s'", msg)
         await sendMessage(f"<code>{msg}</code>", message)
@@ -80,7 +84,9 @@ async def do(func, message: Message):
     body = cleanup_code(content)
     env = namespace_of(message)
     chdir(getcwd())
-    async with aiopen(ospath.join(getcwd(), "bot", "modules", "temp.txt"), "w") as temp:
+    async with aiopen(
+        ospath.join(getcwd(), "bot", "modules", "temp.txt"), "w"
+    ) as temp:
         await temp.write(body)
     stdout = StringIO()
 
@@ -109,10 +115,8 @@ async def do(func, message: Message):
             if value:
                 result = f"{value}"
             else:
-                try:
-                    result = f"{repr(await sync_to_async(eval, body, env))}"
-                except:
-                    pass
+                with suppress(Exception):
+                    result = f"{await sync_to_async(eval, body, env)!r}"
         else:
             result = f"{value}{func_return}"
         if result:
@@ -139,21 +143,25 @@ async def exechelp(_, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        exechelp, filters=command(BotCommands.ExecHelpCommand) & CustomFilters.owner
-    )
+        exechelp,
+        filters=command(BotCommands.ExecHelpCommand) & CustomFilters.owner,
+    ),
 )
 bot.add_handler(
     MessageHandler(
-        aioexecute, filters=command(BotCommands.AExecCommand) & CustomFilters.owner
-    )
+        aioexecute,
+        filters=command(BotCommands.AExecCommand) & CustomFilters.owner,
+    ),
 )
 bot.add_handler(
     MessageHandler(
-        execute, filters=command(BotCommands.ExecCommand) & CustomFilters.owner
-    )
+        execute,
+        filters=command(BotCommands.ExecCommand) & CustomFilters.owner,
+    ),
 )
 bot.add_handler(
     MessageHandler(
-        clear, filters=command(BotCommands.ClearLocalsCommand) & CustomFilters.owner
-    )
+        clear,
+        filters=command(BotCommands.ClearLocalsCommand) & CustomFilters.owner,
+    ),
 )

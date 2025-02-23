@@ -2,7 +2,7 @@ from logging import getLogger
 from time import time
 from urllib.parse import quote as rquote
 
-from bot import config_dict, user_data, DRIVES_NAMES, DRIVES_IDS, INDEX_URLS
+from bot import DRIVES_IDS, DRIVES_NAMES, INDEX_URLS, config_dict, user_data
 from bot.helper.ext_utils.bot_utils import async_to_sync
 from bot.helper.ext_utils.html_helper import hmtl_content
 from bot.helper.ext_utils.shortenurl import short_url
@@ -10,7 +10,6 @@ from bot.helper.ext_utils.status_utils import get_readable_file_size
 from bot.helper.ext_utils.telegraph_helper import telegraph
 from bot.helper.mirror_utils.gdrive_utlis.helper import GoogleDriveHelper
 from bot.helper.telegram_helper.button_build import ButtonMaker
-
 
 LOGGER = getLogger(__name__)
 
@@ -102,10 +101,8 @@ class gdSearch(GoogleDriveHelper):
     def drive_list(self, fileName, target_id="", user_id="", style="html"):
         user_dict: dict = user_data.get(user_id, {})
         use_sa = user_dict.get("use_sa")
-        if (
-            target_id.startswith("mtp:")
-            or target_id == user_dict.get("gdrive_id")
-            and not use_sa
+        if target_id.startswith("mtp:") or (
+            target_id == user_dict.get("gdrive_id") and not use_sa
         ):
             drives = self.get_user_drive(target_id, user_id)
         elif target_id or use_sa:
@@ -115,25 +112,24 @@ class gdSearch(GoogleDriveHelper):
                 drives = [("User Choice", target_id, INDEX)]
             else:
                 drives = [
-                    ("From Owner", target_id, INDEX_URLS[0] if INDEX_URLS else "")
+                    ("From Owner", target_id, INDEX_URLS[0] if INDEX_URLS else ""),
                 ]
         else:
-            drives = zip(DRIVES_NAMES, DRIVES_IDS, INDEX_URLS)
+            drives = zip(DRIVES_NAMES, DRIVES_IDS, INDEX_URLS, strict=False)
         msg = ""
         fileName = self.escapes(str(fileName))
         index, contents_count, contents_data = 1, 0, []
         Title = False
         if (
-            not target_id.startswith("mtp:")
-            and len(DRIVES_IDS) > 1
-            and not use_sa
-            or target_id.startswith("tp:")
-        ):
+            not target_id.startswith("mtp:") and len(DRIVES_IDS) > 1 and not use_sa
+        ) or target_id.startswith("tp:"):
             self.use_sa = False
         self.service = self.authorize()
         for drive_name, dir_id, index_url in drives:
             isRecur = (
-                False if self._isRecursive and len(dir_id) > 23 else self._isRecursive
+                False
+                if self._isRecursive and len(dir_id) > 23
+                else self._isRecursive
             )
             response = self._drive_query(dir_id, fileName, isRecur)
             if not response["files"]:
@@ -151,9 +147,7 @@ class gdSearch(GoogleDriveHelper):
                 Title = True
             if drive_name:
                 if style == "graph":
-                    msg += (
-                        f"╾────────────╼<br><b>{drive_name}</b><br>╾────────────╼<br>"
-                    )
+                    msg += f"╾────────────╼<br><b>{drive_name}</b><br>╾────────────╼<br>"
                 elif style == "html":
                     msg += (
                         '<span class="container center rfontsize">'
@@ -184,7 +178,7 @@ class gdSearch(GoogleDriveHelper):
                                 [
                                     rquote(n, safe="")
                                     for n in self._get_recursive_list(file, dir_id)
-                                ]
+                                ],
                             )
                         else:
                             url_path = rquote(f"{file.get('name')}", safe="")
@@ -239,7 +233,9 @@ class gdSearch(GoogleDriveHelper):
                         else:
                             msg += f'<span> <a class="btn btn-outline-primary btn-sm text-white" href="{url}" target="_blank"><i class="fas fa-bolt"></i> Index Link</a></span>'
                         if config_dict["VIEW_LINK"]:
-                            urlv = short_url(f"{index_url}/{url_path}?a=view", user_id)
+                            urlv = short_url(
+                                f"{index_url}/{url_path}?a=view", user_id
+                            )
                             if style in ["tele", "graph"]:
                                 msg += f' <b>| <a href="{urlv}">View Link</a></b>'
                             else:
@@ -270,7 +266,9 @@ class gdSearch(GoogleDriveHelper):
                 return "", None
             path = [
                 async_to_sync(
-                    telegraph.create_page, config_dict["DRIVE_SEARCH_TITLE"], content
+                    telegraph.create_page,
+                    config_dict["DRIVE_SEARCH_TITLE"],
+                    content,
                 )["path"]
                 for content in contents_data
             ]
@@ -286,7 +284,9 @@ class gdSearch(GoogleDriveHelper):
             return contents_count, buttons.build_menu(1)
         f_name = f"{fileName}_{time()}.html"
         with open(f_name, "w", encoding="utf-8") as f:
-            f.write(hmtl_content.replace("{fileName}", fileName).replace("{msg}", msg))
+            f.write(
+                hmtl_content.replace("{fileName}", fileName).replace("{msg}", msg)
+            )
         return contents_count, f_name
 
     def get_user_drive(self, target_id, user_id):

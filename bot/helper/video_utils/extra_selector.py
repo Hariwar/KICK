@@ -1,22 +1,31 @@
 from __future__ import annotations
+
 from ast import literal_eval
-from asyncio import Event, wait_for, wrap_future, gather
+from asyncio import Event, gather, wait_for, wrap_future
 from functools import partial
+from time import time
+from typing import TYPE_CHECKING
+
 from pyrogram.filters import regex, user
 from pyrogram.handlers import CallbackQueryHandler
-from pyrogram.types import CallbackQuery
-from time import time
 
 from bot import VID_MODE
 from bot.helper.ext_utils.bot_utils import new_thread
-from bot.helper.ext_utils.status_utils import get_readable_file_size, get_readable_time
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
     deleteMessage,
+    editMessage,
+    sendMessage,
 )
-from bot.helper.video_utils import executor as exc
+
+if TYPE_CHECKING:
+    from pyrogram.types import CallbackQuery
+
+    from bot.helper.video_utils import executor as exc
 
 
 class ExtraSelect:
@@ -35,7 +44,8 @@ class ExtraSelect:
         pfunc = partial(cb_extra, obj=self)
         handler = self._listener.client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^extra") & user(self._listener.user_id)
+                pfunc,
+                filters=regex("^extra") & user(self._listener.user_id),
             ),
             group=-1,
         )
@@ -52,7 +62,7 @@ class ExtraSelect:
         else:
             await editMessage(text, self._reply, buttons)
 
-    def streams_select(self, streams: dict = None):
+    def streams_select(self, streams: dict | None = None):
         buttons = ButtonMaker()
         if not self.executor.data:
             self.executor.data.setdefault("stream", {})
@@ -106,7 +116,8 @@ class ExtraSelect:
                     text += "\nStream will removed:\n"
                     for i, sindex in enumerate(sdata, start=1):
                         text += f"{i}. {ddict['stream'][sindex]['info']}\n".replace(
-                            "✅ ", ""
+                            "✅ ",
+                            "",
                         )
                 text += "\nSelect avalilable stream below!"
         if mode == "extract":
@@ -123,14 +134,18 @@ class ExtraSelect:
         if mode == "extract":
             for ext in self.extension:
                 buttons.button_data(
-                    ext.upper(), f"extra {mode} extension {ext}", "header"
+                    ext.upper(),
+                    f"extra {mode} extension {ext}",
+                    "header",
                 )
             buttons.button_data("Extract All", f"extra {mode} video audio subtitle")
         else:
             buttons.button_data("Reset", f"extra {mode} reset", "header")
             buttons.button_data("Reverse", f"extra {mode} reverse", "header")
             buttons.button_data("Continue", f"extra {mode} continue", "footer")
-        text += f"\n\n<i>Time Out: {get_readable_time(180 - (time() - self._time))}</i>"
+        text += (
+            f"\n\n<i>Time Out: {get_readable_time(180 - (time() - self._time))}</i>"
+        )
         return text, buttons.build_menu(2)
 
     async def compress_select(self, streams: dict):
@@ -150,7 +165,8 @@ class ExtraSelect:
                 self.executor.data["video"] = indexmap
             if codec_type == "audio":
                 buttons.button_data(
-                    f"Audio ~ {lang.upper()}", f"extra compress {indexmap}"
+                    f"Audio ~ {lang.upper()}",
+                    f"extra compress {indexmap}",
                 )
         buttons.button_data("Continue", "extra compress 0")
         buttons.button_data("Cancel", "extra cancel")
@@ -209,7 +225,11 @@ class ExtraSelect:
             file: dict = self.executor.data["list"][self.status]
             text = (
                 f"Current: <b>{file}</b>\nReferences: <b>{ref}</b>\n"
-                if (ref := self.executor.data["final"].get(self.status, {}).get("ref"))
+                if (
+                    ref := self.executor.data["final"]
+                    .get(self.status, {})
+                    .get("ref")
+                )
                 else "\nSelect Available References Below!\n"
             )
             self.executor.data["final"][self.status] = {"file": file}
@@ -227,13 +247,22 @@ class ExtraSelect:
         self.executor.data = {}
         ext = [None, None, "mkv"]
         for stream in streams:
-            codec_name, codec_type = stream.get("codec_name"), stream.get("codec_type")
+            codec_name, codec_type = (
+                stream.get("codec_name"),
+                stream.get("codec_type"),
+            )
             if codec_type == "audio" and not ext[0]:
                 match codec_type:
                     case "mp3":
                         ext[0] = "ac3"
                     case (
-                        "aac" | "ac3" | "ac3" | "eac3" | "m4a" | "mka" | "wav" as value
+                        "aac"
+                        | "ac3"
+                        | "ac3"
+                        | "eac3"
+                        | "m4a"
+                        | "mka"
+                        | "wav" as value
                     ):
                         ext[0] = value
                     case _:
@@ -257,7 +286,7 @@ class ExtraSelect:
         if self.is_cancel:
             self._listener.suproc = "cancelled"
             await self._listener.onUploadError(
-                f"{VID_MODE[self.executor.mode]} stopped by user!"
+                f"{VID_MODE[self.executor.mode]} stopped by user!",
             )
 
 
@@ -297,7 +326,9 @@ async def cb_extra(_, query: CallbackQuery, obj: ExtraSelect):
                         await query.answer()
                         for mapindex in sdata:
                             info = ddict["stream"][mapindex]["info"]
-                            ddict["stream"][mapindex]["info"] = info.replace("✅ ", "")
+                            ddict["stream"][mapindex]["info"] = info.replace(
+                                "✅ ", ""
+                            )
                         sdata.clear()
                         await obj.update_message(*obj.streams_select())
                     else:
@@ -307,7 +338,9 @@ async def cb_extra(_, query: CallbackQuery, obj: ExtraSelect):
                         await query.answer()
                         obj.event.set()
                     else:
-                        await query.answer("Please select at least one stream!", True)
+                        await query.answer(
+                            "Please select at least one stream!", True
+                        )
                 case "audio" | "subtitle" as value:
                     await query.answer()
                     obj.executor.data["key"] = value
@@ -369,6 +402,6 @@ async def cb_extra(_, query: CallbackQuery, obj: ExtraSelect):
                     {
                         "key": int(value) if value.isdigit() else data[2:],
                         "extension": obj.extension,
-                    }
+                    },
                 )
                 obj.event.set()

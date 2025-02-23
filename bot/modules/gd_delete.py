@@ -2,9 +2,9 @@ from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
 
-from bot import bot, LOGGER
-from bot.helper.ext_utils.bot_utils import sync_to_async, new_task
-from bot.helper.ext_utils.links_utils import is_gdrive_link, get_link
+from bot import LOGGER, bot
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.ext_utils.links_utils import get_link, is_gdrive_link
 from bot.helper.mirror_utils.gdrive_utlis.delete import gdDelete
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
@@ -31,5 +31,5 @@ bot.add_handler(
     MessageHandler(
         deletefile,
         filters=command(BotCommands.DeleteCommand) & CustomFilters.authorized,
-    )
+    ),
 )

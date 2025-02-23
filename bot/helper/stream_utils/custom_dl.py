@@ -1,18 +1,18 @@
 from asyncio import sleep
-from pyrogram import utils, raw
+
+from pyrogram import raw, utils
 from pyrogram.errors import AuthBytesInvalid
 from pyrogram.file_id import FileId, FileType, ThumbnailSource
-from pyrogram.session import Session, Auth
-from typing import Dict, Union
+from pyrogram.session import Auth, Session
 
-from bot import bot, bot_loop, LOGGER
+from bot import LOGGER, bot, bot_loop
 from bot.helper.ext_utils.exceptions import FIleNotFound
 from bot.helper.stream_utils.file_properties import get_file_ids
 
 
 class ByteStreamer:
     def __init__(self):
-        self._cached_file_ids: Dict[int, FileId] = {}
+        self._cached_file_ids: dict[int, FileId] = {}
         bot_loop.create_task(self._clean_cache())
 
     async def get_file_properties(self, message_id: int) -> FileId:
@@ -32,15 +32,17 @@ class ByteStreamer:
         last_part_cut: int,
         part_count: int,
         chunk_size: int,
-    ) -> Union[str, None]:
+    ) -> str | None:
         media_session = await self._generate_media_session(file_id)
         current_part = 1
         location = await self._get_location(file_id)
         try:
             r = await media_session.invoke(
                 raw.functions.upload.GetFile(
-                    location=location, offset=offset, limit=chunk_size
-                )
+                    location=location,
+                    offset=offset,
+                    limit=chunk_size,
+                ),
             )
             if isinstance(r, raw.types.upload.File):
                 while current_part <= part_count:
@@ -57,8 +59,10 @@ class ByteStreamer:
                         yield chunk
                     r = await media_session.invoke(
                         raw.functions.upload.GetFile(
-                            location=location, offset=offset, limit=chunk_size
-                        )
+                            location=location,
+                            offset=offset,
+                            limit=chunk_size,
+                        ),
                     )
                     current_part += 1
         except (TimeoutError, AttributeError) as e:
@@ -75,7 +79,9 @@ class ByteStreamer:
                     bot,
                     file_id.dc_id,
                     await Auth(
-                        bot, file_id.dc_id, await bot.storage.test_mode()
+                        bot,
+                        file_id.dc_id,
+                        await bot.storage.test_mode(),
                     ).create(),
                     await bot.storage.test_mode(),
                     is_media=True,
@@ -83,18 +89,20 @@ class ByteStreamer:
                 await media_session.start()
                 for _ in range(6):
                     exported_auth = await bot.invoke(
-                        raw.functions.auth.ExportAuthorization(dc_id=file_id.dc_id)
+                        raw.functions.auth.ExportAuthorization(dc_id=file_id.dc_id),
                     )
                     try:
                         await media_session.invoke(
                             raw.functions.auth.ImportAuthorization(
-                                id=exported_auth.id, bytes=exported_auth.bytes
-                            )
+                                id=exported_auth.id,
+                                bytes=exported_auth.bytes,
+                            ),
                         )
                         break
                     except AuthBytesInvalid:
                         LOGGER.info(
-                            "Invalid authorization bytes for DC %s!", file_id.dc_id
+                            "Invalid authorization bytes for DC %s!",
+                            file_id.dc_id,
                         )
                         continue
                 else:
@@ -115,11 +123,11 @@ class ByteStreamer:
     @staticmethod
     async def _get_location(
         file_id: FileId,
-    ) -> Union[
-        raw.types.InputPhotoFileLocation,
-        raw.types.InputDocumentFileLocation,
-        raw.types.InputPeerPhotoFileLocation,
-    ]:
+    ) -> (
+        raw.types.InputPhotoFileLocation
+        | raw.types.InputDocumentFileLocation
+        | raw.types.InputPeerPhotoFileLocation
+    ):
         match file_id.file_type:
             case FileType.CHAT_PHOTO:
                 if file_id.chat_id > 0:

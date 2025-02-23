@@ -1,26 +1,37 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from bot import (
+    LOGGER,
     aria2,
     aria2_options,
     aria2c_global,
-    task_dict,
-    task_dict_lock,
     config_dict,
     non_queued_dl,
     queue_dict_lock,
-    LOGGER,
+    task_dict,
+    task_dict_lock,
 )
 from bot.helper.ext_utils.bot_utils import bt_selection_buttons, sync_to_async
 from bot.helper.ext_utils.files_utils import clean_target
 from bot.helper.ext_utils.task_manager import check_running_tasks
-from bot.helper.listeners import tasks_listener as task
 from bot.helper.mirror_utils.status_utils.aria_status import Aria2Status
-from bot.helper.telegram_helper.message_utils import sendStatusMessage, sendingMessage
+from bot.helper.telegram_helper.message_utils import (
+    sendingMessage,
+    sendStatusMessage,
+)
+
+if TYPE_CHECKING:
+    from bot.helper.listeners import tasks_listener as task
 
 
 async def add_aria2c_download(
-    listener: task.TaskListener, dpath: str, header: str, ratio: int, seed_time: int
+    listener: task.TaskListener,
+    dpath: str,
+    header: str,
+    ratio: int,
+    seed_time: int,
 ):
     a2c_opt = {**aria2_options}
     [a2c_opt.pop(k) for k in aria2c_global if k in aria2_options]
@@ -80,7 +91,10 @@ async def add_aria2c_download(
         SBUTTONS = bt_selection_buttons(gid)
         msg = f"<code>{name}</code>\n\n{listener.tag}, your download paused. Choose files then press <b>Done Selecting</b> button to start downloading."
         await sendingMessage(
-            msg, listener.message, config_dict["IMAGE_PAUSE"], SBUTTONS
+            msg,
+            listener.message,
+            config_dict["IMAGE_PAUSE"],
+            SBUTTONS,
         )
     if add_to_queue:
         await event.wait()

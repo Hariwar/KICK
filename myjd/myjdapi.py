@@ -1,14 +1,13 @@
-# -*- encoding: utf-8 -*-
-from Crypto.Cipher import AES
-from base64 import b64encode, b64decode
+from base64 import b64decode, b64encode
+from functools import wraps
 from hashlib import sha256
 from hmac import new
-from json import dumps, loads, JSONDecodeError
-from httpx import AsyncClient, RequestError
-from httpx import AsyncHTTPTransport
+from json import JSONDecodeError, dumps, loads
 from time import time
 from urllib.parse import quote
-from functools import wraps
+
+from Crypto.Cipher import AES
+from httpx import AsyncClient, AsyncHTTPTransport, RequestError
 
 from .exception import (
     MYJDApiException,
@@ -16,7 +15,6 @@ from .exception import (
     MYJDDecodeException,
     MYJDDeviceNotFoundException,
 )
-
 
 BS = 16
 
@@ -77,8 +75,7 @@ class Config:
         """
         if params is None:
             return await self.device.action(f"{self.url}/list", params)
-        else:
-            return await self.device.action(f"{self.url}/list")
+        return await self.device.action(f"{self.url}/list")
 
     async def listEnum(self, type):
         """
@@ -138,7 +135,7 @@ class Config:
                     "includeExtensions": True,
                     "pattern": "",
                     "values": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/query", params)
 
@@ -228,7 +225,7 @@ class Extension:
                     "name": True,
                     "pattern": "",
                     "installed": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/list", params=params)
 
@@ -242,7 +239,9 @@ class Extension:
         return await self.device.action(f"{self.url}/isEnabled", params=[id])
 
     async def setEnabled(self, id, enabled):
-        return await self.device.action(f"{self.url}/setEnabled", params=[id, enabled])
+        return await self.device.action(
+            f"{self.url}/setEnabled", params=[id, enabled]
+        )
 
 
 class Linkgrabber:
@@ -327,12 +326,17 @@ class Linkgrabber:
                     "variantID": True,
                     "variants": True,
                     "priority": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/queryLinks", params)
 
     async def cleanup(
-        self, action, mode, selection_type, link_ids=None, package_ids=None
+        self,
+        action,
+        mode,
+        selection_type,
+        link_ids=None,
+        package_ids=None,
     ):
         """
         Clean packages and/or links of the linkgrabber list.
@@ -452,7 +456,7 @@ class Linkgrabber:
                     "downloadPassword": None,
                     "destinationFolder": None,
                     "overwritePackagizerRules": False,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/addLinks", params)
 
@@ -467,7 +471,11 @@ class Linkgrabber:
         return await self.device.action(f"{self.url}/setDownloadDirectory", params)
 
     async def move_to_new_package(
-        self, name: str, path: str, link_ids: list = None, package_ids: list = None
+        self,
+        name: str,
+        path: str,
+        link_ids: list | None = None,
+        package_ids: list | None = None,
     ):
         # Requires at least a link_ids or package_ids list, or both.
         if link_ids is None:
@@ -530,7 +538,7 @@ class Linkgrabber:
                     "saveTo": True,
                     "startAt": 0,
                     "status": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/queryPackages", params)
 
@@ -568,7 +576,7 @@ class Downloads:
                     "startAt": 0,
                     "status": True,
                     "url": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/queryLinks", params)
 
@@ -592,12 +600,17 @@ class Downloads:
                     "speed": True,
                     "startAt": 0,
                     "status": True,
-                }
+                },
             ]
         return await self.device.action(f"{self.url}/queryPackages", params)
 
     async def cleanup(
-        self, action, mode, selection_type, link_ids=None, package_ids=None
+        self,
+        action,
+        mode,
+        selection_type,
+        link_ids=None,
+        package_ids=None,
     ):
         """
         Clean packages and/or links of the linkgrabber list.
@@ -673,7 +686,11 @@ class Downloads:
         return await self.device.action(f"{self.url}/resetLinks", params)
 
     async def move_to_new_package(
-        self, link_ids, package_ids, new_pkg_name, download_path
+        self,
+        link_ids,
+        package_ids,
+        new_pkg_name,
+        download_path,
     ):
         params = link_ids, package_ids, new_pkg_name, download_path
         return await self.device.action(f"{self.url}/movetoNewPackage", params)
@@ -720,7 +737,10 @@ class Jddevice:
 
     async def __refresh_direct_connections(self):
         response = await self.myjd.request_api(
-            "/device/getDirectConnectionInfos", "POST", None, self.__action_url()
+            "/device/getDirectConnectionInfos",
+            "POST",
+            None,
+            self.__action_url(),
         )
         if (
             response is not None
@@ -784,15 +804,18 @@ class Jddevice:
                 connection = conn["conn"]
                 api = "http://" + connection["ip"] + ":" + str(connection["port"])
                 response = await self.myjd.request_api(
-                    path, http_action, params, action_url, api
+                    path,
+                    http_action,
+                    params,
+                    action_url,
+                    api,
                 )
                 if response is not None:
                     self.__direct_connection_info.remove(conn)
                     self.__direct_connection_info.insert(0, conn)
                     self.__direct_connection_consecutive_failures = 0
                     return response["data"]
-                else:
-                    conn["cooldown"] = time() + 60
+                conn["cooldown"] = time() + 60
         self.__direct_connection_consecutive_failures += 1
         self.__direct_connection_cooldown = time() + (
             60 * self.__direct_connection_consecutive_failures
@@ -872,7 +895,7 @@ class MyJdApi:
         secret_hash.update(
             email.lower().encode("utf-8")
             + password.encode("utf-8")
-            + domain.lower().encode("utf-8")
+            + domain.lower().encode("utf-8"),
         )
         return secret_hash.digest()
 
@@ -889,7 +912,9 @@ class MyJdApi:
         new_token.update(old_token + bytearray.fromhex(self.__session_token))
         self.__server_encryption_token = new_token.digest()
         new_token = sha256()
-        new_token.update(self.__device_secret + bytearray.fromhex(self.__session_token))
+        new_token.update(
+            self.__device_secret + bytearray.fromhex(self.__session_token)
+        )
         self.__device_encryption_token = new_token.digest()
 
     def __signature_create(self, key, data):
@@ -946,7 +971,9 @@ class MyJdApi:
         self.__login_secret = self.__secret_create(email, password, "server")
         self.__device_secret = self.__secret_create(email, password, "device")
         response = await self.request_api(
-            "/my/connect", "GET", [("email", email), ("appkey", self.__app_key)]
+            "/my/connect",
+            "GET",
+            [("email", email), ("appkey", self.__app_key)],
         )
         self.__connected = True
         self.update_request_id()
@@ -984,7 +1011,9 @@ class MyJdApi:
 
         """
         response = await self.request_api(
-            "/my/disconnect", "GET", [("sessiontoken", self.__session_token)]
+            "/my/disconnect",
+            "GET",
+            [("sessiontoken", self.__session_token)],
         )
         self.__clean_resources()
         if self._http_session is not None:
@@ -1010,7 +1039,9 @@ class MyJdApi:
         :returns: boolean -- True if successful, False if there was any error.
         """
         response = await self.request_api(
-            "/my/listdevices", "GET", [("sessiontoken", self.__session_token)]
+            "/my/listdevices",
+            "GET",
+            [("sessiontoken", self.__session_token)],
         )
         self.update_request_id()
         self.__devices = response["list"]
@@ -1049,7 +1080,12 @@ class MyJdApi:
         raise (MYJDDeviceNotFoundException("Device not found\n"))
 
     async def request_api(
-        self, path, http_method="GET", params=None, action=None, api=None
+        self,
+        path,
+        http_method="GET",
+        params=None,
+        action=None,
+        api=None,
     ):
         """
         Makes a request to the API to the 'path' using the 'http_method' with parameters,'params'.
@@ -1074,15 +1110,16 @@ class MyJdApi:
                         query += [f"{param[0]}={quote(param[1])}"]
                     else:
                         query += [f"&{param[0]}={param[1]}"]
-            query += [f"rid={str(self.__request_id)}"]
+            query += [f"rid={self.__request_id!s}"]
             if self.__server_encryption_token is None:
                 query += [
                     "signature="
                     + str(
                         self.__signature_create(
-                            self.__login_secret, query[0] + "&".join(query[1:])
-                        )
-                    )
+                            self.__login_secret,
+                            query[0] + "&".join(query[1:]),
+                        ),
+                    ),
                 ]
             else:
                 query += [
@@ -1091,8 +1128,8 @@ class MyJdApi:
                         self.__signature_create(
                             self.__server_encryption_token,
                             query[0] + "&".join(query[1:]),
-                        )
-                    )
+                        ),
+                    ),
                 ]
             query = query[0] + "&".join(query[1:])
             res = await session.request(http_method, api + query)
@@ -1101,9 +1138,9 @@ class MyJdApi:
             params_request = []
             if params is not None:
                 for param in params:
-                    if isinstance(param, (str, list)):
+                    if isinstance(param, str | list):
                         params_request += [param]
-                    elif isinstance(param, (dict, bool)):
+                    elif isinstance(param, dict | bool):
                         params_request += [dumps(param)]
                     else:
                         params_request += [str(param)]
@@ -1123,7 +1160,9 @@ class MyJdApi:
                 res = await session.request(
                     http_method,
                     request_url,
-                    headers={"Content-Type": "application/aesjson-jd; charset=utf-8"},
+                    headers={
+                        "Content-Type": "application/aesjson-jd; charset=utf-8"
+                    },
                     content=encrypted_data,
                 )
                 encrypted_response = res.text
@@ -1136,12 +1175,14 @@ class MyJdApi:
                 try:
                     error_msg = loads(
                         self.__decrypt(
-                            self.__device_encryption_token, encrypted_response
-                        )
+                            self.__device_encryption_token,
+                            encrypted_response,
+                        ),
                     )
                 except JSONDecodeError as exc:
                     raise MYJDDecodeException(
-                        "Failed to decode response: {}", encrypted_response
+                        "Failed to decode response: {}",
+                        encrypted_response,
                     ) from exc
             msg = (
                 "\n\tSOURCE: "
@@ -1158,18 +1199,22 @@ class MyJdApi:
             if data is not None:
                 msg += "DATA:\n" + data
             raise (
-                MYJDApiException.get_exception(error_msg["src"], error_msg["type"], msg)
+                MYJDApiException.get_exception(
+                    error_msg["src"], error_msg["type"], msg
+                )
             )
         if action is None:
             if not self.__server_encryption_token:
                 response = self.__decrypt(self.__login_secret, encrypted_response)
             else:
                 response = self.__decrypt(
-                    self.__server_encryption_token, encrypted_response
+                    self.__server_encryption_token,
+                    encrypted_response,
                 )
         else:
             response = self.__decrypt(
-                self.__device_encryption_token, encrypted_response
+                self.__device_encryption_token,
+                encrypted_response,
             )
         jsondata = loads(response.decode("utf-8"))
         if jsondata["rid"] != self.__request_id:

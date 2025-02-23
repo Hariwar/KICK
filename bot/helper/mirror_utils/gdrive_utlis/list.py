@@ -1,21 +1,24 @@
-from aiofiles.os import path as aiopath
-from asyncio import wait_for, Event, wrap_future, gather
+from asyncio import Event, gather, wait_for, wrap_future
 from functools import partial
+from time import time
+
+from aiofiles.os import path as aiopath
 from natsort import natsorted
 from pyrogram.filters import regex, user
 from pyrogram.handlers import CallbackQueryHandler
 from pyrogram.types import CallbackQuery
 from tenacity import RetryError
-from time import time
 
-from bot import config_dict, LOGGER
-from bot.helper.ext_utils.bot_utils import new_thread, new_task, update_user_ldata
-from bot.helper.ext_utils.status_utils import get_readable_file_size, get_readable_time
+from bot import LOGGER, config_dict
+from bot.helper.ext_utils.bot_utils import new_task, new_thread, update_user_ldata
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
 from bot.helper.mirror_utils.gdrive_utlis.helper import GoogleDriveHelper
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.message_utils import editMessage
-
 
 LIST_LIMIT = 6
 
@@ -47,7 +50,8 @@ class gdriveList(GoogleDriveHelper):
         pfunc = partial(id_updates, obj=self)
         handler = self.listener.client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^gdq") & user(self.listener.user_id)
+                pfunc,
+                filters=regex("^gdq") & user(self.listener.user_id),
             ),
             group=-1,
         )
@@ -71,7 +75,7 @@ class gdriveList(GoogleDriveHelper):
         page = (self.iter_start / LIST_LIMIT) + 1 if self.iter_start != 0 else 1
         buttons = ButtonMaker()
         for index, item in enumerate(
-            self.items_list[self.iter_start : LIST_LIMIT + self.iter_start]
+            self.items_list[self.iter_start : LIST_LIMIT + self.iter_start],
         ):
             orig_index = index + self.iter_start
             if item["mimeType"] == self.G_DRIVE_DIR_MIME_TYPE:
@@ -79,7 +83,9 @@ class gdriveList(GoogleDriveHelper):
                 name = item["name"]
             else:
                 ptype = "fi"
-                name = f"[{get_readable_file_size(float(item['size']))}] {item['name']}"
+                name = (
+                    f"[{get_readable_file_size(float(item['size']))}] {item['name']}"
+                )
             buttons.button_data(name, f"gdq pa {ptype} {orig_index}")
         if items_no > LIST_LIMIT:
             for i in [1, 2, 4, 6, 10, 30, 50, 100]:
@@ -95,11 +101,8 @@ class gdriveList(GoogleDriveHelper):
             buttons.button_data("This Path", "gdq cur", "footer")
         if self.list_status == "gdu":
             buttons.button_data("Set as Default", "gdq def", "footer")
-        if (
-            len(self.parents) > 1
-            and len(self.drives) > 1
-            or self._token_user
-            and self._token_owner
+        if (len(self.parents) > 1 and len(self.drives) > 1) or (
+            self._token_user and self._token_owner
         ):
             buttons.button_data("Back", "gdq back pa", "footer")
         if len(self.parents) > 1:
@@ -108,9 +111,7 @@ class gdriveList(GoogleDriveHelper):
         button = buttons.build_menu(f_cols=2)
         msg = "<b>Choose Path:</b>\n\n"
         if items_no > LIST_LIMIT:
-            msg += (
-                f"Page: <b>{int(page)}/{pages}</b> | Step: <b>{self.page_step}</b>\n\n"
-            )
+            msg += f"Page: <b>{int(page)}/{pages}</b> | Step: <b>{self.page_step}</b>\n\n"
         msg += f"Items: {items_no}\nTransfer Type: " + (
             "<b>Download</b>\n" if self.list_status == "gdd" else "<b>Upload</b>\n"
         )
@@ -137,7 +138,7 @@ class gdriveList(GoogleDriveHelper):
         try:
             files = self.getFilesByFolderId(self.id, self.item_type)
             if self.is_cancelled:
-                return
+                return None
         except Exception as err:
             if isinstance(err, RetryError):
                 LOGGER.info("Total Attempts: %s", err.last_attempt.attempt_number)
@@ -145,7 +146,7 @@ class gdriveList(GoogleDriveHelper):
             err = str(err).replace(">", "").replace("<", "")
             self.id = ""
             self.event.set()
-            return
+            return None
         if len(files) == 0 and itype != self.item_type and self.list_status == "gdd":
             itype = "folders" if self.item_type == "files" else "files"
             self.item_type = itype
@@ -153,6 +154,7 @@ class gdriveList(GoogleDriveHelper):
         self.items_list = natsorted(files)
         self.iter_start = 0
         await self.get_items_buttons()
+        return None
 
     async def list_drives(self):
         self.processing = True
@@ -185,12 +187,12 @@ class gdriveList(GoogleDriveHelper):
         else:
             msg = "<b>Choose Drive:</b>\n"
             msg += "Transfer Type: " + (
-                "<b>Download</b>\n" if self.list_status == "gdd" else "<b>Upload</b>\n"
+                "<b>Download</b>\n"
+                if self.list_status == "gdd"
+                else "<b>Upload</b>\n"
             )
             msg += "Token Path: <b>{self.token_path.strip()}</b>\n\n"
-            msg += (
-                "<i>Timeout: {get_readable_time(self._timeout-(time()-self._time))}</i>"
-            )
+            msg += "<i>Timeout: {get_readable_time(self._timeout-(time()-self._time))}</i>"
             self.drives.clear()
             self.parents.clear()
             if not self.use_sa:
@@ -208,16 +210,15 @@ class gdriveList(GoogleDriveHelper):
 
     async def choose_token(self):
         if (
-            self._token_user
-            and self._token_owner
-            or self._sa_owner
-            and self._token_owner
-            or self._sa_owner
-            and self._token_user
+            (self._token_user and self._token_owner)
+            or (self._sa_owner and self._token_owner)
+            or (self._sa_owner and self._token_user)
         ):
             msg = "<b>Choose Token:</b>\n"
             msg += "Transfer Type: " + (
-                "<b>Download</b>\n" if self.list_status == "gdd" else "<b>Upload</b>\n"
+                "<b>Download</b>\n"
+                if self.list_status == "gdd"
+                else "<b>Upload</b>\n"
             )
             msg += f"\n<i>Timeout: {get_readable_time(self._timeout - (time() - self._time))}</i>"
             buttons = ButtonMaker()
@@ -334,7 +335,9 @@ async def id_updates(_, query: CallbackQuery, obj: gdriveList):
         case "cur":
             obj.event.set()
         case "def":
-            id_ = obj.id if obj.token_path != obj.user_token_path else f"mtp:{obj.id}"
+            id_ = (
+                obj.id if obj.token_path != obj.user_token_path else f"mtp:{obj.id}"
+            )
             if id_ != obj.listener.user_dict.get("gdrive_id"):
                 await gather(
                     query.answer(),

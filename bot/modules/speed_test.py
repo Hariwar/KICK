@@ -1,20 +1,21 @@
 from asyncio import gather
+
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
 from speedtest import Speedtest
 
-from bot import bot, LOGGER
-from bot.helper.ext_utils.bot_utils import sync_to_async, new_task
+from bot import LOGGER, bot
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
 from bot.helper.ext_utils.status_utils import get_readable_file_size
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
     auto_delete_message,
-    sendMessage,
     deleteMessage,
-    sendPhoto,
     editMessage,
+    sendMessage,
+    sendPhoto,
 )
 
 
@@ -41,7 +42,9 @@ async def speedtest(_, message: Message):
 <b>├ Country: </b>{result["server"]["country"]}, {result["server"]["cc"]}
 <b>└ LAT/LON </b>{result["client"]["lat"]}/{result["client"]["lon"]}
 """
-        await gather(deleteMessage(msg), sendPhoto(caption, message, result["share"]))
+        await gather(
+            deleteMessage(msg), sendPhoto(caption, message, result["share"])
+        )
     except Exception as e:
         LOGGER.error(e)
         await gather(
@@ -52,6 +55,7 @@ async def speedtest(_, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        speedtest, filters=command(BotCommands.SpeedCommand) & CustomFilters.sudo
-    )
+        speedtest,
+        filters=command(BotCommands.SpeedCommand) & CustomFilters.sudo,
+    ),
 )

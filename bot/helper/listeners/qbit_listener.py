@@ -1,32 +1,34 @@
-from asyncio import sleep, gather
+from asyncio import gather, sleep
 from os import path as ospath
 from time import time
 
 from bot import (
+    LOGGER,
+    Intervals,
+    QbTorrents,
     bot_loop,
+    config_dict,
+    get_client,
+    qb_listener_lock,
     task_dict,
     task_dict_lock,
-    Intervals,
-    config_dict,
-    QbTorrents,
-    qb_listener_lock,
-    get_client,
-    LOGGER,
 )
-from bot.helper.ext_utils.bot_utils import sync_to_async, new_task
-from bot.helper.ext_utils.files_utils import clean_unwanted, clean_target
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
+from bot.helper.ext_utils.files_utils import clean_target, clean_unwanted
 from bot.helper.ext_utils.status_utils import (
     get_readable_file_size,
     get_readable_time,
     getTaskByGid,
 )
-from bot.helper.ext_utils.task_manager import stop_duplicate_check, check_limits_size
+from bot.helper.ext_utils.task_manager import check_limits_size, stop_duplicate_check
 from bot.helper.mirror_utils.status_utils.qbit_status import QbittorrentStatus
 from bot.helper.telegram_helper.message_utils import update_status_message
 
 
 async def _remove_torrent(client, hash_, tag):
-    await sync_to_async(client.torrents_delete, torrent_hashes=hash_, delete_files=True)
+    await sync_to_async(
+        client.torrents_delete, torrent_hashes=hash_, delete_files=True
+    )
     async with qb_listener_lock:
         QbTorrents.pop(tag, None)
     await sync_to_async(client.torrents_delete_tags, tags=tag)
@@ -54,7 +56,7 @@ async def _onSeedFinish(tor):
     if hasattr(task, "client"):
         await gather(
             task.listener.onUploadError(
-                f"Seeding stopped with Ratio {round(tor.ratio, 3)} ({get_readable_time(tor.seeding_time)})"
+                f"Seeding stopped with Ratio {round(tor.ratio, 3)} ({get_readable_time(tor.seeding_time)})",
             ),
             _remove_torrent(task.client, ext_hash, tor.tags),
         )
@@ -80,7 +82,8 @@ async def _download_limits(tor):
     ):
         LOGGER.info("File/folder size over the limit size!")
         _onDownloadError(
-            f"{msg}. File/folder size is {get_readable_file_size(tor.size)}.", tor
+            f"{msg}. File/folder size is {get_readable_file_size(tor.size)}.",
+            tor,
         )
 
 
@@ -96,7 +99,9 @@ async def _onDownloadComplete(tor):
         if task.listener.select:
             await clean_unwanted(task.listener.dir)
             path = tor.content_path.rsplit("/", 1)[0]
-            res = await sync_to_async(task.client.torrents_files, torrent_hash=ext_hash)
+            res = await sync_to_async(
+                task.client.torrents_files, torrent_hash=ext_hash
+            )
             for f in res:
                 if f.priority == 0:
                     await clean_target(ospath.join(path, f.name))
@@ -107,7 +112,8 @@ async def _onDownloadComplete(tor):
                 if task.listener.mid in task_dict:
                     removed = False
                     task_dict[task.listener.mid] = QbittorrentStatus(
-                        task.listener, True
+                        task.listener,
+                        True,
                     )
                 else:
                     removed = True
@@ -153,7 +159,8 @@ async def _qb_listener():
                             _onDownloadError("Dead torrent!", tor_info)
                         else:
                             await sync_to_async(
-                                client.torrents_reannounce, torrent_hashes=tor_info.hash
+                                client.torrents_reannounce,
+                                torrent_hashes=tor_info.hash,
                             )
                     elif state == "downloading":
                         QbTorrents[tag]["stalled_time"] = time()
@@ -169,7 +176,8 @@ async def _qb_listener():
                             msg = f"Force recheck - Name: {tor_info.name} Hash: {tor_info.hash} Downloaded Bytes: {tor_info.downloaded} Size: {tor_info.size} Total Size: {tor_info.total_size}"
                             LOGGER.warning(msg)
                             await sync_to_async(
-                                client.torrents_recheck, torrent_hashes=tor_info.hash
+                                client.torrents_recheck,
+                                torrent_hashes=tor_info.hash,
                             )
                             QbTorrents[tag]["rechecked"] = True
                         elif (
@@ -180,15 +188,18 @@ async def _qb_listener():
                             _onDownloadError("Dead torrent!", tor_info)
                         else:
                             await sync_to_async(
-                                client.torrents_reannounce, torrent_hashes=tor_info.hash
+                                client.torrents_reannounce,
+                                torrent_hashes=tor_info.hash,
                             )
                     elif state == "missingFiles":
                         await sync_to_async(
-                            client.torrents_recheck, torrent_hashes=tor_info.hash
+                            client.torrents_recheck,
+                            torrent_hashes=tor_info.hash,
                         )
                     elif state == "error":
                         _onDownloadError(
-                            "No enough space for this torrent on device", tor_info
+                            "No enough space for this torrent on device",
+                            tor_info,
                         )
                     elif (
                         tor_info.completion_on != 0
@@ -199,7 +210,8 @@ async def _qb_listener():
                         QbTorrents[tag]["uploaded"] = True
                         _onDownloadComplete(tor_info)
                     elif (
-                        state in ["pausedUP", "pausedDL"] and QbTorrents[tag]["seeding"]
+                        state in ["pausedUP", "pausedDL"]
+                        and QbTorrents[tag]["seeding"]
                     ):
                         QbTorrents[tag]["seeding"] = False
                         _onSeedFinish(tor_info)

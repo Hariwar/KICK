@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from aiofiles.os import path as aiopath, listdir
-from aiohttp import ClientSession
 from mimetypes import guess_type
 from os import path as ospath
+from time import time
+from typing import TYPE_CHECKING
+
+from aiofiles.os import listdir
+from aiofiles.os import path as aiopath
+from aiohttp import ClientSession
 from requests import post as rpost
 from requests_toolbelt import MultipartEncoder
 from requests_toolbelt.multipart.encoder import MultipartEncoderMonitor
-from time import time
 
-from bot import config_dict, LOGGER
+from bot import LOGGER, config_dict
 from bot.helper.ext_utils.bot_utils import sync_to_async
-from bot.helper.listeners import tasks_listener as task
+
+if TYPE_CHECKING:
+    from bot.helper.listeners import tasks_listener as task
 
 
 class GoFileUploader:
@@ -61,6 +66,7 @@ class GoFileUploader:
         ):
             if (await resp.json())["status"] == "ok":
                 return True
+            return None
 
     async def _create_folder(self, foldername, parentfolderid):
         LOGGER.info("Created Folder %s", foldername)
@@ -72,12 +78,15 @@ class GoFileUploader:
         async with (
             ClientSession() as session,
             session.put(
-                "https://api.gofile.io/createFolder", data=data, ssl=False
+                "https://api.gofile.io/createFolder",
+                data=data,
+                ssl=False,
             ) as resp,
         ):
             res = await resp.json()
             if res["status"] == "ok":
                 return res["data"]
+            return None
 
     def _upload_file(self, file, parentfolderid):
         mpart = MultipartEncoder(
@@ -85,7 +94,7 @@ class GoFileUploader:
                 "file": (ospath.basename(file), open(file, "rb"), guess_type(file)),
                 "token": self._token,
                 "folderId": parentfolderid,
-            }
+            },
         )
         monitor = MultipartEncoderMonitor(mpart, self._callback)
         resp = rpost(
@@ -96,6 +105,7 @@ class GoFileUploader:
         self._temp_size = self.uploaded_bytes
         if resp["status"] == "ok":
             return resp["data"]["downloadPage"]
+        return None
 
     async def _upload_folder(self, path, createdfolderid):
         self._folderpathd.append(createdfolderid)
@@ -104,7 +114,9 @@ class GoFileUploader:
             file_path = ospath.join(path, file)
             if await aiopath.isfile(file_path):
                 dl_url = await sync_to_async(
-                    self._upload_file, file_path, self._folderpathd[-1]
+                    self._upload_file,
+                    file_path,
+                    self._folderpathd[-1],
                 )
                 if len(file) == 1 and not self._listener.isGofile:
                     self._listener.isGofile = dl_url
@@ -125,7 +137,9 @@ class GoFileUploader:
         file_path = ospath.join(self._listener.dir, self._listener.name)
         if await aiopath.isfile(file_path):
             self._listener.isGofile = await sync_to_async(
-                self._upload_file, file_path, config_dict["GOFILEBASEFOLDER"]
+                self._upload_file,
+                file_path,
+                config_dict["GOFILEBASEFOLDER"],
             )
             return
         await self._upload_folder(file_path, config_dict["GOFILEBASEFOLDER"])

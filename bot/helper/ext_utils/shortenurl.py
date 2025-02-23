@@ -1,11 +1,12 @@
 from base64 import b64encode
-from cloudscraper import create_scraper
 from random import choice, random, randrange
 from time import sleep
 from urllib.parse import quote
+
+from cloudscraper import create_scraper
 from urllib3 import disable_warnings
 
-from bot import config_dict, LOGGER, SHORTENERES, SHORTENER_APIS
+from bot import LOGGER, SHORTENER_APIS, SHORTENERES, config_dict
 from bot.helper.ext_utils.bot_utils import is_premium_user
 
 
@@ -14,7 +15,10 @@ def short_url(longurl, user_id=None, attempt=0):
         headers = {"public-api-token": _shortener_api}
         data = {"urlToShorten": quote(longurl)}
         return cget(
-            "PUT", "https://api.shorte.st/v1/data/url", headers=headers, data=data
+            "PUT",
+            "https://api.shorte.st/v1/data/url",
+            headers=headers,
+            data=data,
         ).json()["shortenedUrl"]
 
     def linkvertise():
@@ -29,7 +33,8 @@ def short_url(longurl, user_id=None, attempt=0):
 
     def default_shortener():
         res = cget(
-            "GET", f"https://{_shortener}/api?api={_shortener_api}&url={quote(longurl)}"
+            "GET",
+            f"https://{_shortener}/api?api={_shortener_api}&url={quote(longurl)}",
         ).json()
         return res.get("shortenedUrl", longurl)
 

@@ -1,7 +1,7 @@
 from re import search as re_search
 from time import time
 
-from bot import LOGGER, jd_lock, jd_downloads
+from bot import LOGGER, jd_downloads, jd_lock
 from bot.helper.ext_utils.bot_utils import retry_function
 from bot.helper.ext_utils.jdownloader_booter import jdownloader
 from bot.helper.ext_utils.status_utils import (
@@ -51,10 +51,12 @@ def get_download(gid, old_info, start_time):
                 "eta": True,
                 "status": True,
                 "hosts": True,
-            }
+            },
         ]
         result = jdownloader.device.downloads.query_packages(jdata)
-        return _get_combined_info(result, start_time) if len(result) > 1 else result[0]
+        return (
+            _get_combined_info(result, start_time) if len(result) > 1 else result[0]
+        )
     except:
         return old_info
 
@@ -95,7 +97,9 @@ class JDownloaderStatus:
         return get_readable_file_size(self._info.get("bytesTotal", 0))
 
     def eta(self):
-        return get_readable_time(eta) if (eta := self._info.get("eta", False)) else "-"
+        return (
+            get_readable_time(eta) if (eta := self._info.get("eta", False)) else "-"
+        )
 
     def status(self):
         self._update()

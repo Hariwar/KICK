@@ -1,19 +1,20 @@
 from asyncio import sleep
+from time import time
+
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
-from time import time
 
-from bot import bot, user_data, OWNER_ID
+from bot import OWNER_ID, bot, user_data
 from bot.helper.ext_utils.bot_utils import new_task
 from bot.helper.ext_utils.status_utils import get_readable_time
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
     copyMessage,
+    editMessage,
     sendCustom,
+    sendMessage,
 )
 
 
@@ -23,7 +24,8 @@ async def broadcast_message(_, message: Message):
     args = message.text.split(maxsplit=1)
     if not reply_to and len(args) == 1:
         await sendMessage(
-            "Please provide message along with command or reply the message", message
+            "Please provide message along with command or reply the message",
+            message,
         )
         return
     users = {x for x in user_data if not user_data[x].get("is_auth")}
@@ -38,7 +40,8 @@ async def broadcast_message(_, message: Message):
         await editMessage(f"<i>Found {count} entry</i>", msg)
         await sleep(1)
         await editMessage(
-            f"<i>Sending brodcase message to {count} users, please wait...</i>", msg
+            f"<i>Sending brodcase message to {count} users, please wait...</i>",
+            msg,
         )
         succ = fail = 0
         for user_id in users:
@@ -67,5 +70,5 @@ bot.add_handler(
     MessageHandler(
         broadcast_message,
         filters=command(BotCommands.BroadcaseCommand) & CustomFilters.owner,
-    )
+    ),
 )

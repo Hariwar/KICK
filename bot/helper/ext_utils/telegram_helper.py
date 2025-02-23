@@ -1,9 +1,8 @@
-from math import ceil
 from asyncio import sleep
+from math import ceil
 
 from bot import bot_loop
 from bot.helper.telegram_helper.button_build import ButtonMaker
-
 
 content_dict = {}
 
@@ -87,6 +86,8 @@ class TeleContent:
         if self._page_no > self._pages and self._pages != 0:
             self._count -= self._max
             self._page_no -= 1
+            return None
+        return None
 
     async def get_content(self, pattern, data=None, fdata=None, extra_buttons=None):
         if pre := self._prepare_data(data, fdata):
@@ -103,7 +104,8 @@ class TeleContent:
         if task > self._max:
             buttons.button_data("<<", f"{pattern} {user_id} pre {mid}")
             buttons.button_data(
-                f"{self._page_no}/{self._pages}", f"{pattern} {user_id} page {mid}"
+                f"{self._page_no}/{self._pages}",
+                f"{pattern} {user_id} page {mid}",
             )
             buttons.button_data(">>", f"{pattern} {user_id} nex {mid}")
         buttons.button_data("Close", f"{pattern} {user_id} close {mid}")

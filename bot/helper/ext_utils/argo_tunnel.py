@@ -1,7 +1,8 @@
-from aiohttp import web
 from asyncio import create_subprocess_exec
 
-from bot import config_dict, LOGGER, PORT
+from aiohttp import web
+
+from bot import LOGGER, PORT, config_dict
 from bot.helper.ext_utils.ping import ping_server
 
 
@@ -10,7 +11,7 @@ async def ping_base_route(repeat=False):
         try:
             code = await (
                 await create_subprocess_exec(
-                    *["cloudflared", "service", "install", token]
+                    *["cloudflared", "service", "install", token],
                 )
             ).wait()
             if code != 0:
@@ -40,7 +41,9 @@ async def kill_route():
     if config_dict["ARGO_TOKEN"]:
         try:
             await (
-                await create_subprocess_exec(*["cloudflared", "service", "uninstall"])
+                await create_subprocess_exec(
+                    *["cloudflared", "service", "uninstall"]
+                )
             ).wait()
         except Exception as e:
             LOGGER.error(e)

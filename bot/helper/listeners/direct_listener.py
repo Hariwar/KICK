@@ -1,14 +1,22 @@
 from __future__ import annotations
-from time import sleep
 
-from bot import aria2, LOGGER
+from time import sleep
+from typing import TYPE_CHECKING
+
+from bot import LOGGER, aria2
 from bot.helper.ext_utils.bot_utils import async_to_sync, sync_to_async
-from bot.helper.listeners import tasks_listener as task
+
+if TYPE_CHECKING:
+    from bot.helper.listeners import tasks_listener as task
 
 
 class DirectListener:
     def __init__(
-        self, listener: task.TaskListener, total_size: int, path: str, a2c_opt: str
+        self,
+        listener: task.TaskListener,
+        total_size: int,
+        path: str,
+        a2c_opt: str,
     ):
         self._path = path
         self._listener = listener
@@ -42,7 +50,9 @@ class DirectListener:
             filename = content["filename"]
             self._a2c_opt["out"] = filename
             try:
-                self.task = aria2.add_uris([content["url"]], self._a2c_opt, position=0)
+                self.task = aria2.add_uris(
+                    [content["url"]], self._a2c_opt, position=0
+                )
             except Exception as e:
                 self._failed += 1
                 LOGGER.error("Unable to download %s due to: %s", filename, e)
@@ -73,7 +83,8 @@ class DirectListener:
             return
         if self._failed == len(contents):
             async_to_sync(
-                self._listener.onDownloadError, "All files are failed to download!"
+                self._listener.onDownloadError,
+                "All files are failed to download!",
             )
             return
         async_to_sync(self._listener.onDownloadComplete)

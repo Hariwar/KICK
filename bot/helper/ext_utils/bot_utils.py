@@ -1,30 +1,32 @@
-from aiohttp import ClientSession
 from asyncio import (
-    create_subprocess_shell,
     create_subprocess_exec,
-    run_coroutine_threadsafe,
+    create_subprocess_shell,
     gather,
+    run_coroutine_threadsafe,
     sleep,
 )
 from asyncio.subprocess import PIPE
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial, wraps
-from pyrogram.types import Message
-from re import search as re_search, compile as re_compile, escape
+from re import compile as re_compile
+from re import escape
+from re import search as re_search
 from time import time
 
+from aiohttp import ClientSession
+from pyrogram.types import Message
+
 from bot import (
+    DATABASE_URL,
     bot,
     bot_loop,
+    config_dict,
     task_dict,
     task_dict_lock,
     user_data,
-    config_dict,
-    DATABASE_URL,
 )
 from bot.helper.ext_utils.db_handler import DbManager
 from bot.helper.telegram_helper.button_build import ButtonMaker
-
 
 THREADPOOL = ThreadPoolExecutor(max_workers=1000)
 
@@ -84,7 +86,8 @@ def bt_selection_buttons(id_: int):
         buttons.button_data("Pincode", f"btsel pin {gid} {pincode}")
     else:
         buttons.button_link(
-            "Select Files", f"{BASE_URL}/app/files/{id_}?pin_code={pincode}"
+            "Select Files",
+            f"{BASE_URL}/app/files/{id_}?pin_code={pincode}",
         )
     buttons.button_data("Done Selecting", f"btsel done {gid} {id_}")
     buttons.button_data("Cancel", f"btsel canc {gid} {id_}")
@@ -93,8 +96,7 @@ def bt_selection_buttons(id_: int):
 
 async def get_user_task(user_id: int):
     async with task_dict_lock:
-        uid_count = sum(task.listener.user_id == user_id for task in task_dict.values())
-    return uid_count
+        return sum(task.listener.user_id == user_id for task in task_dict.values())
 
 
 def presuf_remname_name(user_dict: int, name: str):
@@ -158,7 +160,7 @@ async def get_content_type(url):
             session.get(url, allow_redirects=True, ssl=False) as response,
         ):
             return response.headers.get("Content-Type"), response.headers.get(
-                "Content-Length"
+                "Content-Length",
             )
     except:
         return "", ""
@@ -172,11 +174,12 @@ def arg_parser(items, arg_base):
     while i + 1 <= t:
         part = items[i].strip()
         if part in arg_base:
-            if (
-                i + 1 == t
-                and part in bool_arg_set
-                or part in ["-s", "-j", "-gf", "-vt"]
-            ):
+            if (i + 1 == t and part in bool_arg_set) or part in [
+                "-s",
+                "-j",
+                "-gf",
+                "-vt",
+            ]:
                 arg_base[part] = True
             else:
                 sub_list = []
@@ -194,7 +197,8 @@ def arg_parser(items, arg_base):
 
     if items[0] not in arg_base:
         index_link = next(
-            (i for i, part in enumerate(items) if part in arg_base), len(items)
+            (i for i, part in enumerate(items) if part in arg_base),
+            len(items),
         )
         link = items[:index_link] if index_link else items[:]
         link = " ".join(link).strip()
@@ -219,7 +223,7 @@ async def retry_function(attempt, func, *args, **kwargs):
             await sleep(0.3)
             attempt += 1
     raise Exception(
-        f"Failed to execute {func.__name__}, reached max total attempts {attempt}x!"
+        f"Failed to execute {func.__name__}, reached max total attempts {attempt}x!",
     )
 
 

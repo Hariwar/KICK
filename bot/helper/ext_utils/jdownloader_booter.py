@@ -1,18 +1,21 @@
-from aiofiles.os import listdir, path as aiopath, makedirs
 from json import dump
 from random import randint
-from re import search as re_search, I
+from re import IGNORECASE
+from re import search as re_search
 from time import sleep
 
-from bot import bot, config_dict, jd_lock, LOGGER, FFMPEG_NAME
+from aiofiles.os import listdir, makedirs
+from aiofiles.os import path as aiopath
+
+from bot import FFMPEG_NAME, LOGGER, bot, config_dict, jd_lock
 from bot.helper.ext_utils.bot_utils import cmd_exec, new_task, sync_to_async
 from myjd import MyJdApi
 from myjd.exception import (
-    MYJDException,
     MYJDAuthFailedException,
     MYJDEmailForbiddenException,
     MYJDEmailInvalidException,
     MYJDErrorEmailNotConfirmedException,
+    MYJDException,
 )
 
 
@@ -41,7 +44,7 @@ class JDownloader(MyJdApi):
         self.device = None
         self.error = "Connecting... Try agin after couple of seconds"
         bot_name = bot.me.username
-        self._device_name = f"{bot_name.replace(re_search(r'(bot|_bot)$', bot_name, I).group(), '_')}{randint(0, 100)}"
+        self._device_name = f"{bot_name.replace(re_search(r'(bot|_bot)$', bot_name, IGNORECASE).group(), '_')}{randint(0, 100)}"
         if (
             await aiopath.exists("/JDownloader/logs")
             and len(await listdir("/JDownloader/logs")) > 2
@@ -49,7 +52,7 @@ class JDownloader(MyJdApi):
             LOGGER.info("Starting JDownloader... This might take up to 5 sec")
         else:
             LOGGER.info(
-                "Starting JDownloader... This might take up to 15 sec and might restart once after build!"
+                "Starting JDownloader... This might take up to 15 sec and might restart once after build!",
             )
         jdata = {
             "autoconnectenabledv2": True,
@@ -99,7 +102,8 @@ class JDownloader(MyJdApi):
         except MYJDException as e:
             self.error = f"{e}".strip()
             LOGGER.info(
-                "Failed to connect with jdownloader! Retrying... ERROR: %s", self.error
+                "Failed to connect with jdownloader! Retrying... ERROR: %s",
+                self.error,
             )
             sleep(10)
             return self.jdconnect()
@@ -125,7 +129,9 @@ class JDownloader(MyJdApi):
             break
         self.device.enable_direct_connection()
         self.error = ""
-        LOGGER.info("JDownloader have been connected on device %s!", self._device_name)
+        LOGGER.info(
+            "JDownloader have been connected on device %s!", self._device_name
+        )
 
 
 jdownloader = JDownloader()

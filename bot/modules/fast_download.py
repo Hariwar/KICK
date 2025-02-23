@@ -1,28 +1,29 @@
-from aiofiles.os import path as aiopath
 from ast import literal_eval
-from asyncio import sleep, gather
+from asyncio import gather, sleep
 from json import loads
+from random import choice
+
+from aiofiles.os import path as aiopath
 from pyrogram import Client
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
-from random import choice
 from requests import utils as rutils
 
 from bot import bot, config_dict
 from bot.helper.ext_utils.bot_utils import (
-    sync_to_async,
-    new_task,
-    cmd_exec,
     arg_parser,
+    cmd_exec,
     is_premium_user,
+    new_task,
+    sync_to_async,
 )
 from bot.helper.ext_utils.commons_check import UseCheck
 from bot.helper.ext_utils.links_utils import (
-    is_url,
-    is_magnet,
-    get_stream_link,
     get_link,
+    get_stream_link,
+    is_magnet,
+    is_url,
 )
 from bot.helper.ext_utils.shortenurl import short_url
 from bot.helper.ext_utils.status_utils import (
@@ -36,12 +37,12 @@ from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
-    deleteMessage,
     auto_delete_message,
-    sendingMessage,
     copyMessage,
+    deleteMessage,
+    editMessage,
+    sendingMessage,
+    sendMessage,
 )
 
 
@@ -83,9 +84,15 @@ class FastDL(TaskListener):
         await self.getTag(text)
 
         if fmsg := await UseCheck(self.message).run(
-            True, True, True, session=True, send_pm=True
+            True,
+            True,
+            True,
+            session=True,
+            send_pm=True,
         ):
-            await auto_delete_message(self.message, fmsg, self.message.reply_to_message)
+            await auto_delete_message(
+                self.message, fmsg, self.message.reply_to_message
+            )
             return
 
         arg_base = {"link": "", "-i": 0, "-b": False}
@@ -114,7 +121,8 @@ class FastDL(TaskListener):
             and (self.multi > 0 or isBulk)
         ):
             await sendMessage(
-                f"Upss {self.tag}, multi/bulk mode for premium user only", self.message
+                f"Upss {self.tag}, multi/bulk mode for premium user only",
+                self.message,
             )
             return
 
@@ -131,12 +139,14 @@ class FastDL(TaskListener):
 
         if not is_url(self.link) and not is_magnet(self.link):
             await sendMessage(
-                "Send command along with link or by reply to the link!", self.message
+                "Send command along with link or by reply to the link!",
+                self.message,
             )
             return
 
         self.editable = await sendMessage(
-            "<i>Checking request, please wait...</i>", self.message
+            "<i>Checking request, please wait...</i>",
+            self.message,
         )
         upload_path = config_dict["RCLONE_PATH"]
         rjson = await cmd_exec(
@@ -148,7 +158,7 @@ class FastDL(TaskListener):
                 "rclone.conf",
                 upload_path,
                 self.link,
-            ]
+            ],
         )
         if rjson[2] != 0:
             text = (
@@ -171,7 +181,9 @@ class FastDL(TaskListener):
                 "<b>┌ Status:</b> Complete\n"
                 f"<b>├ Size:</b> {get_readable_file_size(rjson.get('file_size'))}\n"
             )
-            url = f"{config_dict['RCLONE_SERVE_URL']}/{url_path}/{rutils.quote(name)}"
+            url = (
+                f"{config_dict['RCLONE_SERVE_URL']}/{url_path}/{rutils.quote(name)}"
+            )
             typee = await cmd_exec(
                 [
                     "gclone",
@@ -182,7 +194,7 @@ class FastDL(TaskListener):
                     "--config",
                     "rclone.conf",
                     f"{upload_path}/{name}",
-                ]
+                ],
             )
             res = loads(typee[0])
             if typee[2] == 0 and res["IsDir"]:
@@ -191,10 +203,12 @@ class FastDL(TaskListener):
             else:
                 text += f"<b>├ Type:</b> {res['MimeType']}\n"
             buttons.button_link(
-                "Cloud Link", await sync_to_async(short_url, url, self.user_id)
+                "Cloud Link",
+                await sync_to_async(short_url, url, self.user_id),
             )
             if stream_link := get_stream_link(
-                res["MimeType"], f"{url_path}/{rutils.quote(name)}"
+                res["MimeType"],
+                f"{url_path}/{rutils.quote(name)}",
             ):
                 buttons.button_link(
                     "Stream Link",
@@ -220,7 +234,8 @@ class FastDL(TaskListener):
             if is_magnet(self.link):
                 tele = TelePost(config_dict["SOURCE_LINK_TITLE"])
                 mag_link = await sync_to_async(
-                    tele.create_post, f"<code>{name}<br></code><br>{self.link}"
+                    tele.create_post,
+                    f"<code>{name}<br></code><br>{self.link}",
                 )
                 buttons.button_link("Source Link", mag_link)
             else:
@@ -242,7 +257,10 @@ class FastDL(TaskListener):
             stime := config_dict["AUTO_DELETE_UPLOAD_MESSAGE_DURATION"]
         ):
             await auto_delete_message(
-                msg, self.message, self.message.reply_to_message, stime=stime
+                msg,
+                self.message,
+                self.message.reply_to_message,
+                stime=stime,
             )
 
 
@@ -252,6 +270,7 @@ async def fastdl(client: Client, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        fastdl, filters=command(BotCommands.FastDlCommand) & CustomFilters.authorized
-    )
+        fastdl,
+        filters=command(BotCommands.FastDlCommand) & CustomFilters.authorized,
+    ),
 )

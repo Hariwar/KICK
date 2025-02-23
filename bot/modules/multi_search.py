@@ -1,27 +1,33 @@
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath
-from asyncio import gather, Event, wait_for, wrap_future, sleep
+from asyncio import Event, gather, sleep, wait_for, wrap_future
 from configparser import ConfigParser
 from functools import partial
 from json import loads as jsonloads
 from os import path as ospath
-from pyrogram import Client
-from pyrogram.enums import MessagesFilter
-from pyrogram.filters import command, regex, user, text
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Message, CallbackQuery
 from time import time
 
-from bot import bot, bot_dict, bot_lock, config_dict, user_data, LOGGER
-from bot.helper.ext_utils.bot_utils import sync_to_async, new_task, new_thread, cmd_exec
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
+from pyrogram import Client
+from pyrogram.enums import MessagesFilter
+from pyrogram.filters import command, regex, text, user
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+from pyrogram.types import CallbackQuery, Message
+
+from bot import LOGGER, bot, bot_dict, bot_lock, config_dict, user_data
+from bot.helper.ext_utils.bot_utils import (
+    cmd_exec,
+    new_task,
+    new_thread,
+    sync_to_async,
+)
 from bot.helper.ext_utils.commons_check import UseCheck
 from bot.helper.ext_utils.conf_loads import intialize_savebot
 from bot.helper.ext_utils.links_utils import is_media
 from bot.helper.ext_utils.status_utils import (
-    get_date_time,
     action,
-    get_readable_time,
+    get_date_time,
     get_readable_file_size,
+    get_readable_time,
 )
 from bot.helper.ext_utils.telegram_helper import TeleContent
 from bot.helper.mirror_utils.gdrive_utlis.search import gdSearch
@@ -29,17 +35,19 @@ from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
     auto_delete_message,
-    sendFile,
     deleteMessage,
+    editMessage,
+    sendFile,
+    sendMessage,
     sendPhoto,
 )
 
 
 class MultiSerach:
-    def __init__(self, clinet: Client, message: Message, editable: Message, query: str):
+    def __init__(
+        self, clinet: Client, message: Message, editable: Message, query: str
+    ):
         self._client: Client = clinet
         self._reply_to = None
         self._timeout = 240
@@ -82,7 +90,8 @@ class MultiSerach:
     async def change_query_handler(self):
         pfunc = partial(change_query, obj=self)
         handler = self._client.add_handler(
-            MessageHandler(pfunc, filters=text & user(self.user_id)), group=-1
+            MessageHandler(pfunc, filters=text & user(self.user_id)),
+            group=-1,
         )
         try:
             await wait_for(self.query_event.wait(), timeout=self._timeout)
@@ -102,7 +111,7 @@ class MultiSerach:
     async def search_files(self):
         cur_content: dict = self._content.get(self.query, {})
         if (saved_content := cur_content.get("data")) and cur_content.get(
-            "mode"
+            "mode",
         ) == self.mode:
             contents = saved_content
         else:
@@ -136,7 +145,7 @@ class MultiSerach:
                     contents.append(msg)
             elif self.mode == "gdrive":
                 if self.config_path.startswith("tokens/") or self.user_dict.get(
-                    "use_sa"
+                    "use_sa",
                 ):
                     target_id = self.user_dict.get("gdrive_id", "") or ""
                     LOGGER.info("Using user drive: %s2", target_id)
@@ -144,7 +153,8 @@ class MultiSerach:
                     target_id = ""
                 count, contents = await sync_to_async(
                     gdSearch(
-                        isRecursive=self.isRecursive, itemType=self.type
+                        isRecursive=self.isRecursive,
+                        itemType=self.type,
                     ).drive_list,
                     self.query,
                     target_id,
@@ -153,7 +163,7 @@ class MultiSerach:
                 )
             elif self.mode == "rclone":
                 config = ConfigParser()
-                async with aiopen(self.config_path, "r") as f:
+                async with aiopen(self.config_path) as f:
                     config.read_string(await f.read())
                 if config.has_section("combine"):
                     config.remove_section("combine")
@@ -204,9 +214,7 @@ class MultiSerach:
                                 else:
                                     msg += f"{number}. <code>{name}</code>\n"
                                 if size > 0:
-                                    msg += (
-                                        f"<b>Size:</b> {get_readable_file_size(size)}\n"
-                                    )
+                                    msg += f"<b>Size:</b> {get_readable_file_size(size)}\n"
                                 if not file["IsDir"]:
                                     msg += f"<b>Type:</b> {mime}\n"
                                 index += 1
@@ -229,9 +237,7 @@ class MultiSerach:
         if self.mode != "telegram":
             cap += f"<b>├ Type: </b>{self.type.title() if self.type != 'both' else 'Folders & Files'}\n"
         if self.mode == "gdrive":
-            cap += (
-                f"<b>├ Recursive: </b>{'Enable' if self.isRecursive else 'Disable'}\n"
-            )
+            cap += f"<b>├ Recursive: </b>{'Enable' if self.isRecursive else 'Disable'}\n"
         cap += f"<b>└ Key Input: </b><code>{self.query.title()}</code>"
 
         if self.mode == "gdrive":
@@ -239,7 +245,10 @@ class MultiSerach:
                 if self.style == "graph" and config_dict["ENABLE_IMAGE_MODE"]:
                     await gather(
                         sendPhoto(
-                            cap, self.message, config_dict["IMAGE_SEARCH"], contents
+                            cap,
+                            self.message,
+                            config_dict["IMAGE_SEARCH"],
+                            contents,
                         ),
                         deleteMessage(self.editable),
                     )
@@ -248,7 +257,10 @@ class MultiSerach:
                 if self.style == "html":
                     await gather(
                         sendFile(
-                            self.message, contents, cap, config_dict["IMAGE_HTML"]
+                            self.message,
+                            contents,
+                            cap,
+                            config_dict["IMAGE_HTML"],
                         ),
                         deleteMessage(self.editable),
                     )
@@ -281,7 +293,9 @@ class MultiSerach:
             user_config = self.config_path.startswith(("rclone/", "tokens/"))
             buttons.button_data("Change Query", "list change", "header")
             buttons.button_data(
-                f"{'🔥 ' if user_config else ''}User Config", "list uc _", "header"
+                f"{'🔥 ' if user_config else ''}User Config",
+                "list uc _",
+                "header",
             )
             buttons.button_data("Files", "list files _")
             buttons.button_data("Folders", "list folders _")
@@ -309,7 +323,9 @@ class MultiSerach:
                     "header",
                 )
                 buttons.button_data(
-                    f"{'🔥 ' if user_config else ''}User Token", "list ut _", "header"
+                    f"{'🔥 ' if user_config else ''}User Token",
+                    "list ut _",
+                    "header",
                 )
                 buttons.button_data("Files", "list files")
                 buttons.button_data("Folders", "list folders")
@@ -321,7 +337,8 @@ class MultiSerach:
                 )
         elif self.search:
             msg, buttons = await self.tele_list.get_content(
-                "list", extra_buttons=[("Change Query", "change")]
+                "list",
+                extra_buttons=[("Change Query", "change")],
             )
             if not msg:
                 self.search = False
@@ -336,6 +353,7 @@ class MultiSerach:
         await gather(self.list_buttons(), wrap_future(future))
         if isinstance(self.is_cancelled, str):
             return self.is_cancelled
+        return None
 
 
 async def change_query(_, message: Message, obj: MultiSerach):
@@ -371,10 +389,11 @@ async def cb(_, query: CallbackQuery, obj: MultiSerach):
             await obj.list_buttons()
         case "html" | "graph" | "tele" as value:
             if not await aiopath.exists(obj.config_path) and not obj.user_dict.get(
-                "use_sa"
+                "use_sa",
             ):
                 await query.answer(
-                    f"{obj.config_path or 'Token.pickle'} not exists!", True
+                    f"{obj.config_path or 'Token.pickle'} not exists!",
+                    True,
                 )
                 return
             obj.style, obj.search = value, True
@@ -411,14 +430,18 @@ async def cb(_, query: CallbackQuery, obj: MultiSerach):
             obj.mode = value
             if value == "telegram":
                 await intialize_savebot(
-                    obj.user_dict.get("session_string"), True, obj.user_id
+                    obj.user_dict.get("session_string"),
+                    True,
+                    obj.user_id,
                 )
                 async with bot_lock:
                     userbot: Client = (
                         bot_dict[obj.user_id]["SAVEBOT"] or bot_dict["SAVEBOT"]
                     )
                 if not userbot:
-                    await query.answer("Telegram search required session string!", True)
+                    await query.answer(
+                        "Telegram search required session string!", True
+                    )
                     return
                 obj.engine, obj.search = userbot, True
                 await gather(
@@ -433,12 +456,13 @@ async def cb(_, query: CallbackQuery, obj: MultiSerach):
             obj.type = value
             if obj.mode == "rclone":
                 if not obj.config_path.endswith(".conf") and await aiopath.exists(
-                    "rclone.conf"
+                    "rclone.conf",
                 ):
                     obj.config_path = "rclone.conf"
                 if not obj.config_path:
                     await query.answer(
-                        f"{obj.config_path or 'Rclone.conf'} not exists!", True
+                        f"{obj.config_path or 'Rclone.conf'} not exists!",
+                        True,
                     )
                     return
                 obj.search = True
@@ -464,7 +488,10 @@ async def cb(_, query: CallbackQuery, obj: MultiSerach):
                 return
             tdata = int(data[4]) if data[2] == "foot" else int(data[3])
             msg, buttons = await obj.tele_list.get_content(
-                "list", data[2], tdata, [("Change Query", "change")]
+                "list",
+                data[2],
+                tdata,
+                [("Change Query", "change")],
             )
             if not buttons:
                 await query.answer(msg, True)
@@ -479,7 +506,9 @@ async def multi_search(client: Client, message: Message):
         await auto_delete_message(message, fmsg, reply_to)
         return
 
-    if reply_to and is_media(reply_to) or not reply_to and len(message.command) == 1:
+    if (reply_to and is_media(reply_to)) or (
+        not reply_to and len(message.command) == 1
+    ):
         msg = await sendMessage(
             f"{message.from_user.mention}, send a search key along with command or by reply with command.",
             message,
@@ -499,5 +528,5 @@ bot.add_handler(
     MessageHandler(
         multi_search,
         filters=command(BotCommands.ListCommand) & CustomFilters.authorized,
-    )
+    ),
 )

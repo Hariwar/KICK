@@ -1,6 +1,6 @@
 from pyrogram.filters import create
 
-from bot import config_dict, user_data, OWNER_ID
+from bot import OWNER_ID, config_dict, user_data
 
 
 class CustomFilters:
@@ -33,7 +33,7 @@ class CustomFilters:
                 or user_dict.get("is_sudo")
                 or (config_dict["PREMIUM_MODE"] and user_dict.get("is_premium"))
             )
-            or user_data.get(chat_id, {}).get("is_auth")
+            or user_data.get(chat_id, {}).get("is_auth"),
         )
 
     authorized = create(authorized_user)

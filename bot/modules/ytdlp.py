@@ -1,36 +1,40 @@
-from aiohttp import ClientSession
 from ast import literal_eval
-from asyncio import wait_for, Event, wrap_future, sleep, gather
+from asyncio import Event, gather, sleep, wait_for, wrap_future
 from functools import partial
 from os import path as ospath
+from time import time
+
+from aiohttp import ClientSession
 from pyrogram import Client
 from pyrogram.filters import command, regex, user
 from pyrogram.handlers import CallbackQueryHandler, MessageHandler
 from pyrogram.types import CallbackQuery, Message
-from time import time
 from yt_dlp import YoutubeDL
 
-from bot import bot, config_dict, LOGGER
+from bot import LOGGER, bot, config_dict
 from bot.helper.ext_utils.bot_utils import (
+    arg_parser,
     is_premium_user,
-    sync_to_async,
     new_task,
     new_thread,
-    arg_parser,
+    sync_to_async,
 )
 from bot.helper.ext_utils.commons_check import UseCheck
-from bot.helper.ext_utils.links_utils import is_url, get_link
-from bot.helper.ext_utils.status_utils import get_readable_file_size, get_readable_time
+from bot.helper.ext_utils.links_utils import get_link, is_url
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
 from bot.helper.listeners.tasks_listener import TaskListener
 from bot.helper.mirror_utils.download_utils.yt_dlp_download import YoutubeDLHelper
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
     auto_delete_message,
     deleteMessage,
+    editMessage,
+    sendMessage,
 )
 from bot.helper.video_utils.selector import SelectMode
 
@@ -53,7 +57,8 @@ class YtSelection:
         pfunc = partial(select_format, obj=self)
         handler = self._listener.client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^ytq") & user(self._listener.user_id)
+                pfunc,
+                filters=regex("^ytq") & user(self._listener.user_id),
             ),
             group=-1,
         )
@@ -61,7 +66,8 @@ class YtSelection:
             await wait_for(self.event.wait(), timeout=self._timeout)
         except:
             await editMessage(
-                "Timed Out. Task has been cancelled!", self._listener.editable
+                "Timed Out. Task has been cancelled!",
+                self._listener.editable,
             )
             self.qual = None
             self.is_cancelled = True
@@ -75,7 +81,9 @@ class YtSelection:
         if "entries" in result:
             self._is_playlist = True
             for i in ["144", "240", "360", "480", "720", "1080", "1440", "2160"]:
-                video_format = f"bv*[height<=?{i}][ext=mp4]+ba[ext=m4a]/b[height<=?{i}]"
+                video_format = (
+                    f"bv*[height<=?{i}][ext=mp4]+ba[ext=m4a]/b[height<=?{i}]"
+                )
                 b_data = f"{i}|mp4"
                 self.formats[b_data] = video_format
                 buttons.button_data(f"{i}-mp4", f"ytq {b_data}")
@@ -132,7 +140,9 @@ class YtSelection:
                 for b_name, tbr_dict in self.formats.items():
                     if len(tbr_dict) == 1:
                         tbr, v_list = next(iter(tbr_dict.items()))
-                        buttonName = f"{b_name} ({get_readable_file_size(v_list[0])})"
+                        buttonName = (
+                            f"{b_name} ({get_readable_file_size(v_list[0])})"
+                        )
                         buttons.button_data(buttonName, f"ytq sub {b_name} {tbr}")
                     else:
                         buttons.button_data(b_name, f"ytq dict {b_name}")
@@ -299,10 +309,16 @@ class YtDlp(TaskListener):
         await self.getTag(text)
 
         if fmsg := await UseCheck(self.message, self.isLeech).run(
-            True, daily=True, ml_chek=True, session=True, send_pm=True
+            True,
+            daily=True,
+            ml_chek=True,
+            session=True,
+            send_pm=True,
         ):
             self.removeFromSameDir()
-            await auto_delete_message(self.message, fmsg, self.message.reply_to_message)
+            await auto_delete_message(
+                self.message, fmsg, self.message.reply_to_message
+            )
             return
 
         arg_base = {
@@ -364,7 +380,8 @@ class YtDlp(TaskListener):
             and (self.multi > 0 or isBulk)
         ):
             await sendMessage(
-                "Upss, multi/bulk mode for premium user only", self.message
+                "Upss, multi/bulk mode for premium user only",
+                self.message,
             )
             return
 
@@ -415,7 +432,8 @@ class YtDlp(TaskListener):
             name, self.link = await _mdisk(self.link, name)
 
         self.editable = await sendMessage(
-            "<i>Checking for <b>YT-DLP</b> link, please wait...</i>", self.message
+            "<i>Checking for <b>YT-DLP</b> link, please wait...</i>",
+            self.message,
         )
         if self.link:
             await sleep(0.5)
@@ -432,7 +450,11 @@ class YtDlp(TaskListener):
         opt = (
             opt
             or self.user_dict.get("yt_opt")
-            or (config_dict["YT_DLP_OPTIONS"] if "yt_opt" not in self.user_dict else "")
+            or (
+                config_dict["YT_DLP_OPTIONS"]
+                if "yt_opt" not in self.user_dict
+                else ""
+            )
         )
 
         if opt:
@@ -458,7 +480,7 @@ class YtDlp(TaskListener):
                 elif value.lower() == "false":
                     value = False
                 elif value.startswith(("{", "[", "(")) and value.endswith(
-                    ("}", "]", ")")
+                    ("}", "]", ")"),
                 ):
                     value = literal_eval(value)
                 options[key] = value
@@ -497,12 +519,13 @@ async def ytdlleech(client: Client, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        ytdl, filters=command(BotCommands.YtdlCommand) & CustomFilters.authorized
-    )
+        ytdl,
+        filters=command(BotCommands.YtdlCommand) & CustomFilters.authorized,
+    ),
 )
 bot.add_handler(
     MessageHandler(
         ytdlleech,
         filters=command(BotCommands.YtdlLeechCommand) & CustomFilters.authorized,
-    )
+    ),
 )

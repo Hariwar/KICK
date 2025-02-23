@@ -39,4 +39,6 @@ async def extractBulkLinks(message: Message, bulk_start: str, bulk_end: str):
             links_list = await getLinksFromFile(reply_to)
         elif reply_to.text:
             links_list = getLinksFromMessage(reply_to.text)
-    return filterLinks(links_list, bulk_start, bulk_end) if links_list else links_list
+    return (
+        filterLinks(links_list, bulk_start, bulk_end) if links_list else links_list
+    )

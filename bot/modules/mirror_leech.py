@@ -1,58 +1,63 @@
-from aiofiles.os import path as aiopath
-from asyncio import sleep, gather
+from asyncio import gather, sleep
 from base64 import b64encode
 from os import path as ospath
+from re import match as re_match
+from urllib.parse import urlparse
+
+from aiofiles.os import path as aiopath
 from pyrogram import Client
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
-from re import match as re_match
-from urllib.parse import urlparse
 
-from bot import bot, config_dict, LOGGER
+from bot import LOGGER, bot, config_dict
 from bot.helper.ext_utils.bot_utils import (
+    arg_parser,
     get_content_type,
     is_premium_user,
-    sync_to_async,
     new_task,
-    arg_parser,
+    sync_to_async,
 )
 from bot.helper.ext_utils.commons_check import UseCheck
 from bot.helper.ext_utils.conf_loads import intialize_savebot
 from bot.helper.ext_utils.exceptions import DirectDownloadLinkException
 from bot.helper.ext_utils.links_utils import (
     get_link,
-    is_url,
-    is_magnet,
-    is_mega_link,
-    is_media,
-    is_gdrive_link,
-    is_sharer_link,
     is_gdrive_id,
-    is_tele_link,
+    is_gdrive_link,
+    is_magnet,
+    is_media,
+    is_mega_link,
     is_rclone_path,
+    is_sharer_link,
+    is_tele_link,
+    is_url,
 )
 from bot.helper.listeners.tasks_listener import TaskListener
 from bot.helper.mirror_utils.download_utils.aria2_download import add_aria2c_download
-from bot.helper.mirror_utils.download_utils.direct_downloader import add_direct_download
+from bot.helper.mirror_utils.download_utils.direct_downloader import (
+    add_direct_download,
+)
 from bot.helper.mirror_utils.download_utils.direct_link_generator import (
     direct_link_generator,
 )
 from bot.helper.mirror_utils.download_utils.gd_download import add_gd_download
 from bot.helper.mirror_utils.download_utils.jd_download import add_jd_download
 from bot.helper.mirror_utils.download_utils.qbit_download import add_qb_torrent
-from bot.helper.mirror_utils.download_utils.rclone_download import add_rclone_download
+from bot.helper.mirror_utils.download_utils.rclone_download import (
+    add_rclone_download,
+)
 from bot.helper.mirror_utils.download_utils.telegram_download import (
     TelegramDownloadHelper,
 )
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    deleteMessage,
     auto_delete_message,
+    deleteMessage,
     editMessage,
     get_tg_link_message,
+    sendMessage,
 )
 from bot.helper.video_utils.selector import SelectMode
 from myjd.exception import MYJDException
@@ -95,7 +100,11 @@ class Mirror(TaskListener):
 
         reply_to = self.message.reply_to_message
         if fmsg := await UseCheck(self.message, self.isLeech).run(
-            True, daily=True, ml_chek=True, session=True, send_pm=True
+            True,
+            daily=True,
+            ml_chek=True,
+            session=True,
+            send_pm=True,
         ):
             self.removeFromSameDir()
             await auto_delete_message(self.message, fmsg, reply_to)
@@ -176,7 +185,8 @@ class Mirror(TaskListener):
             and (self.multi > 0 or isBulk)
         ):
             await sendMessage(
-                f"Upss {self.tag}, multi/bulk mode for premium user only", self.message
+                f"Upss {self.tag}, multi/bulk mode for premium user only",
+                self.message,
             )
             return
 
@@ -217,7 +227,8 @@ class Mirror(TaskListener):
         self.link = self.link or get_link(self.message)
 
         self.editable = await sendMessage(
-            "<i>Checking request, please wait...</i>", self.message
+            "<i>Checking request, please wait...</i>",
+            self.message,
         )
         if self.link:
             await sleep(0.5)
@@ -225,10 +236,13 @@ class Mirror(TaskListener):
         if self.link and is_tele_link(self.link):
             try:
                 await intialize_savebot(
-                    self.user_dict.get("session_string"), True, self.user_id
+                    self.user_dict.get("session_string"),
+                    True,
+                    self.user_id,
                 )
                 self.session, reply_to = await get_tg_link_message(
-                    self.link, self.user_id
+                    self.link,
+                    self.user_id,
                 )
             except Exception as e:
                 LOGGER.error(e, exc_info=True)
@@ -243,7 +257,9 @@ class Mirror(TaskListener):
             self.options = " ".join(input_list[1:]).replace(self.link, "")
             b_msg.append(f"{self.bulk[0]} -i {len(self.bulk)} {self.options}")
             nextmsg = await sendMessage(" ".join(b_msg), self.message)
-            nextmsg = await self.client.get_messages(self.message.chat.id, nextmsg.id)
+            nextmsg = await self.client.get_messages(
+                self.message.chat.id, nextmsg.id
+            )
             if self.message.from_user:
                 nextmsg.from_user = self.message.from_user
             else:
@@ -295,7 +311,9 @@ class Mirror(TaskListener):
             LOGGER.info(self.link)
 
         if self.isGofile:
-            await editMessage("<i>GoFile upload has been enabled!</i>", self.editable)
+            await editMessage(
+                "<i>GoFile upload has been enabled!</i>", self.editable
+            )
             await sleep(0.5)
 
         try:
@@ -379,9 +397,7 @@ class Mirror(TaskListener):
             ussr, pssw = args["-au"], args["-ap"]
             if ussr or pssw:
                 auth = f"{ussr}:{pssw}"
-                headers += (
-                    f" authorization: Basic {b64encode(auth.encode()).decode('ascii')}"
-                )
+                headers += f" authorization: Basic {b64encode(auth.encode()).decode('ascii')}"
             if "static.romsget.io" in self.link:
                 headers = "Referer: https://www.romsget.io/"
             await add_aria2c_download(self, path, headers, ratio, seed_time)
@@ -413,33 +429,37 @@ async def jd_leech(client: Client, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        mirror, filters=command(BotCommands.MirrorCommand) & CustomFilters.authorized
-    )
+        mirror,
+        filters=command(BotCommands.MirrorCommand) & CustomFilters.authorized,
+    ),
 )
 bot.add_handler(
     MessageHandler(
         qb_mirror,
         filters=command(BotCommands.QbMirrorCommand) & CustomFilters.authorized,
-    )
+    ),
 )
 bot.add_handler(
     MessageHandler(
-        leech, filters=command(BotCommands.LeechCommand) & CustomFilters.authorized
-    )
+        leech,
+        filters=command(BotCommands.LeechCommand) & CustomFilters.authorized,
+    ),
 )
 bot.add_handler(
     MessageHandler(
-        qb_leech, filters=command(BotCommands.QbLeechCommand) & CustomFilters.authorized
-    )
+        qb_leech,
+        filters=command(BotCommands.QbLeechCommand) & CustomFilters.authorized,
+    ),
 )
 bot.add_handler(
     MessageHandler(
         jd_mirror,
         filters=command(BotCommands.JdMirrorCommand) & CustomFilters.authorized,
-    )
+    ),
 )
 bot.add_handler(
     MessageHandler(
-        jd_leech, filters=command(BotCommands.JdLeechCommand) & CustomFilters.authorized
-    )
+        jd_leech,
+        filters=command(BotCommands.JdLeechCommand) & CustomFilters.authorized,
+    ),
 )

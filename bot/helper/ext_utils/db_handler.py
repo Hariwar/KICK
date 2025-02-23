@@ -1,19 +1,20 @@
 from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath, makedirs
+from aiofiles.os import makedirs
+from aiofiles.os import path as aiopath
 from dotenv import dotenv_values
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import PyMongoError
 
 from bot import (
-    user_data,
-    rss_dict,
-    bot_id,
-    config_dict,
-    aria2_options,
-    qbit_options,
-    bot_loop,
     DATABASE_URL,
     LOGGER,
+    aria2_options,
+    bot_id,
+    bot_loop,
+    config_dict,
+    qbit_options,
+    rss_dict,
+    user_data,
 )
 
 
@@ -37,17 +38,23 @@ class DbManager:
             return
         # Save bot settings
         await self._db.settings.config.update_one(
-            {"_id": bot_id}, {"$set": config_dict}, upsert=True
+            {"_id": bot_id},
+            {"$set": config_dict},
+            upsert=True,
         )
         # Save Aria2c options
         if await self._db.settings.aria2c.find_one({"_id": bot_id}) is None:
             await self._db.settings.aria2c.update_one(
-                {"_id": bot_id}, {"$set": aria2_options}, upsert=True
+                {"_id": bot_id},
+                {"$set": aria2_options},
+                upsert=True,
             )
         # Save qbittorrent options
         if await self._db.settings.qbittorrent.find_one({"_id": bot_id}) is None:
             await self._db.settings.qbittorrent.update_one(
-                {"_id": bot_id}, {"$set": qbit_options}, upsert=True
+                {"_id": bot_id},
+                {"$set": qbit_options},
+                upsert=True,
             )
         # User Data
         if await self._db.users[bot_id].find_one():
@@ -91,28 +98,36 @@ class DbManager:
             return
         current_config = dict(dotenv_values("config.env"))
         await self._db.settings.deployConfig.replace_one(
-            {"_id": bot_id}, current_config, upsert=True
+            {"_id": bot_id},
+            current_config,
+            upsert=True,
         )
 
     async def update_config(self, dict_):
         if self._err:
             return
         await self._db.settings.config.update_one(
-            {"_id": bot_id}, {"$set": dict_}, upsert=True
+            {"_id": bot_id},
+            {"$set": dict_},
+            upsert=True,
         )
 
     async def update_aria2(self, key, value):
         if self._err:
             return
         await self._db.settings.aria2c.update_one(
-            {"_id": bot_id}, {"$set": {key: value}}, upsert=True
+            {"_id": bot_id},
+            {"$set": {key: value}},
+            upsert=True,
         )
 
     async def update_qbittorrent(self, key, value):
         if self._err:
             return
         await self._db.settings.qbittorrent.update_one(
-            {"_id": bot_id}, {"$set": {key: value}}, upsert=True
+            {"_id": bot_id},
+            {"$set": {key: value}},
+            upsert=True,
         )
 
     async def update_private_file(self, path):
@@ -125,7 +140,9 @@ class DbManager:
             pf_bin = ""
         path = path.replace(".", "__")
         await self._db.settings.files.update_one(
-            {"_id": bot_id}, {"$set": {path: pf_bin}}, upsert=True
+            {"_id": bot_id},
+            {"$set": {path: pf_bin}},
+            upsert=True,
         )
         if path == "config.env":
             await self.update_deploy_config()
@@ -148,7 +165,9 @@ class DbManager:
         else:
             doc_bin = ""
         await self._db.users[bot_id].update_one(
-            {"_id": user_id}, {"$set": {key: doc_bin}}, upsert=True
+            {"_id": user_id},
+            {"$set": {key: doc_bin}},
+            upsert=True,
         )
 
     async def rss_update_all(self):
@@ -156,14 +175,18 @@ class DbManager:
             return
         for user_id in list(rss_dict.keys()):
             await self._db.rss[bot_id].replace_one(
-                {"_id": user_id}, rss_dict[user_id], upsert=True
+                {"_id": user_id},
+                rss_dict[user_id],
+                upsert=True,
             )
 
     async def rss_update(self, user_id):
         if self._err:
             return
         await self._db.rss[bot_id].replace_one(
-            {"_id": user_id}, rss_dict[user_id], upsert=True
+            {"_id": user_id},
+            rss_dict[user_id],
+            upsert=True,
         )
 
     async def rss_delete(self, user_id):
@@ -174,7 +197,9 @@ class DbManager:
     async def add_incomplete_task(self, cid, link, tag):
         if self._err:
             return
-        await self._db.tasks[bot_id].insert_one({"_id": link, "cid": cid, "tag": tag})
+        await self._db.tasks[bot_id].insert_one(
+            {"_id": link, "cid": cid, "tag": tag}
+        )
 
     async def rm_complete_task(self, link):
         if self._err:

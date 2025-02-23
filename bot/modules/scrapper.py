@@ -1,33 +1,38 @@
-from aiofiles import open as aiopen
-from aiohttp import ClientSession
-from asyncio import sleep, gather, wait_for, Event
+from asyncio import Event, gather, sleep, wait_for
 from functools import partial
-from lxml.etree import HTML
-from pyrogram import Client
-from pyrogram.filters import command, regex, user
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Message, CallbackQuery
 from random import choice
 from time import time
 from urllib.parse import urlparse
+
+from aiofiles import open as aiopen
+from aiohttp import ClientSession
+from lxml.etree import HTML
+from pyrogram import Client
+from pyrogram.filters import command, regex, user
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+from pyrogram.types import CallbackQuery, Message
 
 from bot import bot, config_dict, user_data
 from bot.helper.ext_utils.bot_utils import arg_parser, new_task, new_thread
 from bot.helper.ext_utils.commons_check import UseCheck
 from bot.helper.ext_utils.index_scrape import index_scrapper
-from bot.helper.ext_utils.links_utils import get_link, is_media, is_url, is_magnet
-from bot.helper.ext_utils.status_utils import get_readable_time, get_date_time, action
+from bot.helper.ext_utils.links_utils import get_link, is_magnet, is_media, is_url
+from bot.helper.ext_utils.status_utils import (
+    action,
+    get_date_time,
+    get_readable_time,
+)
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
     auto_delete_message,
-    sendMedia,
-    sendMessage,
     copyMessage,
     deleteMessage,
     editMessage,
     sendingMessage,
+    sendMedia,
+    sendMessage,
 )
 
 
@@ -52,7 +57,9 @@ class ScrapeHelper:
     async def _event_handler(self):
         pfunc = partial(stop_scrapper, obj=self)
         handler = self._client.add_handler(
-            CallbackQueryHandler(pfunc, filters=regex("^scrap") & user(self._user_id)),
+            CallbackQueryHandler(
+                pfunc, filters=regex("^scrap") & user(self._user_id)
+            ),
             group=-1,
         )
         try:
@@ -139,7 +146,8 @@ class ScrapeHelper:
 
     async def commons(self, mode: str):
         await editMessage(
-            f"<i>Scrapping from <b>{mode}</b>, palease wait...</i>", self.editabale
+            f"<i>Scrapping from <b>{mode}</b>, palease wait...</i>",
+            self.editabale,
         )
         msg = ""
         html = HTML(await self._resp(self.link))
@@ -154,7 +162,8 @@ class ScrapeHelper:
                     if len(links) > 1:
                         msg += f"⁍ <b>{item.xpath('./h3/text()')[0]}</b>\n"
                     for i, sitem in enumerate(
-                        item.xpath('.//div[@class="toggle-content"]//a'), 1
+                        item.xpath('.//div[@class="toggle-content"]//a'),
+                        1,
                     ):
                         sinfo, link = (
                             sitem.xpath(".//text()")[0].strip(),
@@ -163,15 +172,22 @@ class ScrapeHelper:
                         link = link.rsplit("url=", 1)[-1]
                         if not is_url(link):
                             link = get_link(
-                                text=sitem.xpath("./@onclick")[0].rsplit("url=", 1)[-1]
+                                text=sitem.xpath("./@onclick")[0].rsplit("url=", 1)[
+                                    -1
+                                ],
                             )
                         msg += f'{i}. <a href="{link}">{sinfo}</a>\n'
                 case "atishmkv":
-                    info, link = item.xpath(".//text()")[0], item.xpath(".//@href")[0]
+                    info, link = (
+                        item.xpath(".//text()")[0],
+                        item.xpath(".//@href")[0],
+                    )
                     lnks = "|".join(
                         f'<a href="{slink}">Link {i}</a>'
                         for i, slink in enumerate(
-                            HTML(await self._resp(link)).xpath("//article//p/a/@href"),
+                            HTML(await self._resp(link)).xpath(
+                                "//article//p/a/@href"
+                            ),
                             1,
                         )
                     )
@@ -188,14 +204,16 @@ class ScrapeHelper:
             msg = await sendMessage(msg, self.message)
             if self._pm and self._isSuperGroup:
                 await copyMessage(self._user_id, msg)
-            await self._onScrapSuccess(len(links), f"<b>├ Mode: </b>{mode.title()}\n")
+            await self._onScrapSuccess(
+                len(links), f"<b>├ Mode: </b>{mode.title()}\n"
+            )
         else:
             await self._onScrapError("ERROR: Can't find any link!")
 
     async def manget(self):
         self._event_handler()
         links = HTML(await self._resp(self.link)).xpath(
-            '//a/@href[starts-with(., "magnet")]'
+            '//a/@href[starts-with(., "magnet")]',
         )
         if links:
             mode = "<b>├ Mode: </b>Magnet\n"
@@ -268,7 +286,9 @@ async def scrapper(client: Client, message: Message):
     isFile = False
     reply_to = message.reply_to_message
 
-    if fmsg := await UseCheck(message).run(forpremi=True, session=True, send_pm=True):
+    if fmsg := await UseCheck(message).run(
+        forpremi=True, session=True, send_pm=True
+    ):
         await auto_delete_message(message, fmsg, reply_to)
         return
 
@@ -305,5 +325,5 @@ bot.add_handler(
     MessageHandler(
         scrapper,
         filters=command(BotCommands.ScrapperCommand) & CustomFilters.authorized,
-    )
+    ),
 )

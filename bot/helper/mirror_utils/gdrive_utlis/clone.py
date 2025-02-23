@@ -1,14 +1,15 @@
-from googleapiclient.errors import HttpError
 from logging import getLogger
 from os import path as ospath
-from tenacity import (
-    retry,
-    wait_exponential,
-    stop_after_attempt,
-    retry_if_exception_type,
-    RetryError,
-)
 from time import time
+
+from googleapiclient.errors import HttpError
+from tenacity import (
+    RetryError,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from bot.helper.ext_utils.bot_utils import async_to_sync
 from bot.helper.mirror_utils.gdrive_utlis.helper import GoogleDriveHelper
@@ -26,7 +27,7 @@ class gdClone(GoogleDriveHelper):
 
     def user_setting(self):
         if self.listener.upDest.startswith("mtp:") or self.listener.link.startswith(
-            "mtp:"
+            "mtp:",
         ):
             self.token_path = f"tokens/{self.listener.user_id}.pickle"
             self.listener.upDest = self.listener.upDest.replace("mtp:", "", 1)
@@ -35,7 +36,7 @@ class gdClone(GoogleDriveHelper):
             self.listener.upDest = self.listener.upDest.replace("tp:", "", 1)
             self.use_sa = False
         elif self.listener.upDest.startswith("sa:") or self.listener.user_dict.get(
-            "use_sa"
+            "use_sa",
         ):
             self.listener.upDest = self.listener.upDest.replace("sa:", "", 1)
             self.use_sa = True
@@ -59,13 +60,16 @@ class gdClone(GoogleDriveHelper):
             meta = self.getFileMetadata(file_id)
             mime_type = meta.get("mimeType")
             if mime_type == self.G_DRIVE_DIR_MIME_TYPE:
-                dir_id = self.create_directory(meta.get("name"), self.listener.upDest)
+                dir_id = self.create_directory(
+                    meta.get("name"), self.listener.upDest
+                )
                 self._cloneFolder(meta.get("name"), meta.get("id"), dir_id)
                 durl = self.G_DRIVE_DIR_BASE_DOWNLOAD_URL.format(dir_id)
                 if self.is_cancelled:
                     LOGGER.info("Deleting cloned data from Drive...")
                     self.service.files().delete(
-                        fileId=dir_id, supportsAllDrives=True
+                        fileId=dir_id,
+                        supportsAllDrives=True,
                     ).execute()
                     return None, None, None, None, None, None
                 mime_type = "Folder"
@@ -73,7 +77,9 @@ class gdClone(GoogleDriveHelper):
             else:
                 self.listener.name = self.listener.newname or self.listener.name
                 file = self._copyFile(
-                    meta.get("id"), self.listener.upDest, self.listener.newname
+                    meta.get("id"),
+                    self.listener.upDest,
+                    self.listener.newname,
                 )
                 msg += f"<b>Name: </b><code>{file.get('name')}</code>"
                 durl = self.G_DRIVE_BASE_DOWNLOAD_URL.format(file.get("id"))
@@ -129,6 +135,7 @@ class gdClone(GoogleDriveHelper):
                 self.total_time = int(time() - self._start_time)
             if self.is_cancelled:
                 break
+        return None
 
     @retry(
         wait=wait_exponential(multiplier=2, min=3, max=6),
@@ -145,7 +152,9 @@ class gdClone(GoogleDriveHelper):
             )
         except HttpError as err:
             if err.resp.get("content-type", "").startswith("application/json"):
-                reason = eval(err.content).get("error").get("errors")[0].get("reason")
+                reason = (
+                    eval(err.content).get("error").get("errors")[0].get("reason")
+                )
                 if reason not in [
                     "userRateLimitExceeded",
                     "dailyLimitExceeded",
@@ -163,7 +172,7 @@ class gdClone(GoogleDriveHelper):
                         raise err
 
                     if self.is_cancelled:
-                        return
+                        return None
 
                     self.switchServiceAccount()
                     return self._copyFile(file_id, dest_id, name)

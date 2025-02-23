@@ -1,19 +1,22 @@
 from __future__ import annotations
-from asyncio import wait_for, Event, wrap_future, sleep, gather
+
+from asyncio import Event, gather, sleep, wait_for, wrap_future
 from functools import partial
 from os import path as ospath
+from time import time
+from typing import TYPE_CHECKING
+
 from pyrogram.filters import regex, user
 from pyrogram.handlers import CallbackQueryHandler
-from time import time
 
 from bot import (
-    task_dict,
-    task_dict_lock,
+    LOGGER,
+    jd_downloads,
+    jd_lock,
     non_queued_dl,
     queue_dict_lock,
-    jd_lock,
-    jd_downloads,
-    LOGGER,
+    task_dict,
+    task_dict_lock,
 )
 from bot.helper.ext_utils.bot_utils import new_thread, retry_function, sync_to_async
 from bot.helper.ext_utils.jdownloader_booter import jdownloader
@@ -23,16 +26,18 @@ from bot.helper.ext_utils.task_manager import (
     check_running_tasks,
     stop_duplicate_check,
 )
-from bot.helper.listeners import tasks_listener as task
 from bot.helper.listeners.jdownloader_listener import onDownloadStart
 from bot.helper.mirror_utils.status_utils.jdownloader_status import JDownloaderStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.message_utils import (
-    sendStatusMessage,
-    editMessage,
     deleteMessage,
+    editMessage,
+    sendStatusMessage,
 )
+
+if TYPE_CHECKING:
+    from bot.helper.listeners import tasks_listener as task
 
 
 async def configureDownload(_, query, obj):
@@ -60,7 +65,8 @@ class JDownloaderHelper:
         pfunc = partial(configureDownload, obj=self)
         handler = self._listener.client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^jdq") & user(self._listener.user_id)
+                pfunc,
+                filters=regex("^jdq") & user(self._listener.user_id),
             ),
             group=-1,
         )
@@ -68,7 +74,8 @@ class JDownloaderHelper:
             await wait_for(self.event.wait(), timeout=self._timeout)
         except:
             await editMessage(
-                "Timed Out. Task has been cancelled!", self._listener.editable
+                "Timed Out. Task has been cancelled!",
+                self._listener.editable,
             )
             self.is_cancelled = True
             self.event.set()
@@ -94,7 +101,9 @@ async def add_jd_download(listener: task.TaskListener, path: str):
             return
 
         try:
-            await wait_for(retry_function(0, jdownloader.device.jd.version), timeout=5)
+            await wait_for(
+                retry_function(0, jdownloader.device.jd.version), timeout=5
+            )
         except:
             is_connected = await sync_to_async(jdownloader.jdconnect)
             if not is_connected:
@@ -105,7 +114,9 @@ async def add_jd_download(listener: task.TaskListener, path: str):
         if not jd_downloads:
             await retry_function(0, jdownloader.device.linkgrabber.clear_list)
             if odl := await retry_function(
-                0, jdownloader.device.downloads.query_packages, [{}]
+                0,
+                jdownloader.device.downloads.query_packages,
+                [{}],
             ):
                 await retry_function(
                     0,
@@ -118,7 +129,7 @@ async def add_jd_download(listener: task.TaskListener, path: str):
                 "autoExtract": False,
                 "links": listener.link,
                 "packageName": listener.name or None,
-            }
+            },
         ]
         await retry_function(0, jdownloader.device.linkgrabber.add_links, jdata)
 
@@ -141,10 +152,12 @@ async def add_jd_download(listener: task.TaskListener, path: str):
                     "availableOnlineCount": True,
                     "availableTempUnknownCount": True,
                     "availableUnknownCount": True,
-                }
+                },
             ]
             queued_downloads = await retry_function(
-                0, jdownloader.device.linkgrabber.query_packages, jdata
+                0,
+                jdownloader.device.linkgrabber.query_packages,
+                jdata,
             )
 
             if not online_packages and corrupted_packages and error:
@@ -203,10 +216,12 @@ async def add_jd_download(listener: task.TaskListener, path: str):
                 break
         else:
             error = (
-                name or "Download not added! Maybe some issues in jdownloader or site!"
+                name
+                or "Download not added! Maybe some issues in jdownloader or site!"
             )
             await gather(
-                deleteMessage(listener.editable), listener.onDownloadError(error)
+                deleteMessage(listener.editable),
+                listener.onDownloadError(error),
             )
             if corrupted_packages or online_packages:
                 packages_to_remove = corrupted_packages + online_packages
@@ -244,7 +259,8 @@ async def add_jd_download(listener: task.TaskListener, path: str):
     msg, button = await stop_duplicate_check(listener)
     if msg:
         await gather(
-            deleteMessage(listener.editable), listener.onDownloadError(msg, button)
+            deleteMessage(listener.editable),
+            listener.onDownloadError(msg, button),
         )
         return
 
@@ -258,7 +274,7 @@ async def add_jd_download(listener: task.TaskListener, path: str):
             ),
             deleteMessage(listener.editable),
             listener.onDownloadError(
-                f"{msg}. File/folder size is {get_readable_file_size(size)}."
+                f"{msg}. File/folder size is {get_readable_file_size(size)}.",
             ),
         )
         listener.removeFromSameDir()
@@ -266,7 +282,9 @@ async def add_jd_download(listener: task.TaskListener, path: str):
 
     if listener.select and await JDownloaderHelper(listener).waitForConfigurations():
         await retry_function(
-            0, jdownloader.device.linkgrabber.remove_links, package_ids=online_packages
+            0,
+            jdownloader.device.linkgrabber.remove_links,
+            package_ids=online_packages,
         )
         listener.removeFromSameDir()
         return
@@ -298,7 +316,9 @@ async def add_jd_download(listener: task.TaskListener, path: str):
     await sleep(0.5)
 
     download_packages = await retry_function(
-        0, jdownloader.device.downloads.query_packages, [{"saveTo": True}]
+        0,
+        jdownloader.device.downloads.query_packages,
+        [{"saveTo": True}],
     )
     async with jd_lock:
         packages = []
@@ -317,7 +337,9 @@ async def add_jd_download(listener: task.TaskListener, path: str):
         return
 
     await retry_function(
-        0, jdownloader.device.downloads.force_download, package_ids=packages
+        0,
+        jdownloader.device.downloads.force_download,
+        package_ids=packages,
     )
 
     async with task_dict_lock:

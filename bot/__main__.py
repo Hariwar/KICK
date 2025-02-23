@@ -1,131 +1,91 @@
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath
 from asyncio import create_subprocess_exec, gather
-from heroku3 import from_key
 from os import execl as osexecl
-from platform import system, architecture, release
-from psutil import (
-    disk_usage,
-    cpu_percent,
-    swap_memory,
-    cpu_count,
-    virtual_memory,
-    net_io_counters,
-    boot_time,
-)
-from pyrogram import Client
-from pyrogram.filters import command, regex, new_chat_members, left_chat_member
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Message, CallbackQuery, BotCommand
+from platform import architecture, release, system
 from re import match as re_match
-from signal import signal, SIGINT
+from signal import SIGINT, signal
 from sys import executable
 from time import time
 from uuid import uuid4
 
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
+from heroku3 import from_key
 from psutil import (
     boot_time,
     cpu_count,
-    cpu_freq,
     cpu_percent,
     disk_usage,
+    net_io_counters,
     swap_memory,
     virtual_memory,
-    net_io_counters,
 )
+from pyrogram import Client
+from pyrogram.filters import command, left_chat_member, new_chat_members, regex
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+from pyrogram.types import BotCommand, CallbackQuery, Message
+
 from bot import (
+    ARIA_NAME,
+    DATABASE_URL,
+    FFMPEG_NAME,
+    INCOMPLETE_TASK_NOTIFIER,
+    LOGGER,
+    QBIT_NAME,
+    Intervals,
     bot,
-    bot_loop,
     bot_dict,
     bot_lock,
+    bot_loop,
     bot_name,
     botStartTime,
-    Intervals,
-    user_data,
     config_dict,
     scheduler,
-    LOGGER,
-    DATABASE_URL,
-    INCOMPLETE_TASK_NOTIFIER,
-    ARIA_NAME,
-    QBIT_NAME,
-    FFMPEG_NAME,
+    user_data,
 )
-from bot.helper.ext_utils.argo_tunnel import ping_base_route, kill_route
+from bot.helper.ext_utils.argo_tunnel import kill_route, ping_base_route
 from bot.helper.ext_utils.bot_utils import (
     cmd_exec,
-    sync_to_async,
     new_task,
+    sync_to_async,
     update_user_ldata,
 )
-from bot.helper.ext_utils.conf_loads import intialize_userbot, intialize_savebot
+from bot.helper.ext_utils.conf_loads import intialize_savebot, intialize_userbot
 from bot.helper.ext_utils.db_handler import DbManager
-from bot.helper.ext_utils.files_utils import clean_all, exit_clean_up, clean_target
+from bot.helper.ext_utils.files_utils import clean_all, clean_target, exit_clean_up
 from bot.helper.ext_utils.help_messages import HelpString, get_help_button
 from bot.helper.ext_utils.jdownloader_booter import jdownloader
 from bot.helper.ext_utils.links_utils import is_media
 from bot.helper.ext_utils.shortenurl import short_url
 from bot.helper.ext_utils.status_utils import (
+    get_progress_bar_string,
     get_readable_file_size,
     get_readable_time,
-    get_progress_bar_string,
 )
 from bot.helper.ext_utils.telegraph_helper import telegraph
 from bot.helper.listeners.aria2_listener import start_aria2_listener
 from bot.helper.mirror_utils.rclone_utils.serve import rclone_serve_booter
 from bot.helper.stream_utils.file_properties import gen_link
-from bot.helper.stream_utils.web_services import start_server, server
+from bot.helper.stream_utils.web_services import server, start_server
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    limit,
-    sendMessage,
-    editMessage,
-    sendFile,
     auto_delete_message,
-    sendingMessage,
-    deleteMessage,
-    editMarkup,
-    editPhoto,
-    sendCustom,
-    editCustom,
     copyMessage,
+    deleteMessage,
+    editCustom,
+    editMarkup,
+    editMessage,
+    editPhoto,
+    limit,
+    sendCustom,
+    sendFile,
+    sendingMessage,
+    sendMessage,
 )
 from bot.modules import (
-    authorize,
-    bot_settings,
-    clone,
-    exec,
-    gd_count,
-    gd_delete,
-    multi_search,
-    cancel_task,
-    mirror_leech,
-    speed_test,
-    status,
-    torrent_search,
-    torrent_select,
-    fast_download,
     resume_task,
-    user_settings,
-    ytdlp,
-    shell,
-    rss,
-    wayback,
-    hash,
-    bypass,
-    scrapper,
-    purge,
-    broadcase,
-    info,
-    misc_tools,
-    backup,
-    join_chat,
-    video_tools,
-    media_info,
-    ddls,
-    save_message,
+    torrent_search,
 )
 
 
@@ -133,7 +93,8 @@ from bot.modules import (
 async def stats(_, message: Message):
     if await aiopath.exists(".git"):
         last_commit = await cmd_exec(
-            "git log -1 --date=short --pretty=format:'%cd \n<b>🌚 From</b> %cr'", True
+            "git log -1 --date=short --pretty=format:'%cd \n<b>🌚 From</b> %cr'",
+            True,
         )
         last_commit = last_commit[0]
     else:
@@ -182,20 +143,21 @@ async def start(client: Client, message: Message):
         if "_" in data:
             chat_id, message_id, log_id = data.split("_")
             await intialize_savebot(
-                user_data.get(user_id, {}).get("session_string"), True, user_id
+                user_data.get(user_id, {}).get("session_string"),
+                True,
+                user_id,
             )
             async with bot_lock:
                 userbot: Client = bot_dict[user_id]["SAVEBOT"] or bot_dict["SAVEBOT"]
             if not userbot:
                 await sendMessage(
-                    "Required session string or this is not your task!", message
+                    "Required session string or this is not your task!",
+                    message,
                 )
                 return
             msg = await userbot.get_messages(int(chat_id), int(message_id))
             media, link, cmsg = is_media(msg), msg.link, None
-            ext_msg = (
-                f"You have to download manually through this link <code>{link}</code>"
-            )
+            ext_msg = f"You have to download manually through this link <code>{link}</code>"
             if msg.chat.has_protected_content:
                 await sendMessage(
                     f'Sorry this <a href="{link}">{media.file_name}</a> is protected content.\n{ext_msg}.',
@@ -221,11 +183,14 @@ async def start(client: Client, message: Message):
                     )
                     return
                 _, msg = await gather(
-                    deleteMessage(cmsg), client.get_messages(msg.chat.id, msg.id)
+                    deleteMessage(cmsg),
+                    client.get_messages(msg.chat.id, msg.id),
                 )
                 buttons.reset()
                 save_message = config_dict["SAVE_MESSAGE"]
-                for mode, link in zip(["Stream", "Download"], await gen_link(msg)):
+                for mode, link in zip(
+                    ["Stream", "Download"], await gen_link(msg), strict=False
+                ):
                     if link:
                         buttons.button_link(
                             mode,
@@ -239,7 +204,7 @@ async def start(client: Client, message: Message):
                 await copyMessage(message.chat.id, msg, markup)
             else:
                 await sendMessage(
-                    f'Required LEECH_LOG to get content <a href="{link}">{media.file_name}</a> directly\n{ext_msg}'
+                    f'Required LEECH_LOG to get content <a href="{link}">{media.file_name}</a> directly\n{ext_msg}',
                 )
             return
         if data == user_dict.get("session_token"):
@@ -249,7 +214,10 @@ async def start(client: Client, message: Message):
             )
             text = f"Session has been refreshed for {get_readable_time(config_dict['SESSION_TIMEOUT'])}."
         else:
-            text, image = "This session has been expired!", config_dict["IMAGE_UNAUTH"]
+            text, image = (
+                "This session has been expired!",
+                config_dict["IMAGE_UNAUTH"],
+            )
     elif await CustomFilters.authorized(client, message):
         text = f"Bot ready to use, send /{BotCommands.HelpCommand} to get a list of available commands"
     elif user_dict.get("enable_pm"):
@@ -280,10 +248,11 @@ async def restart(_, message: Message):
         cmd = message.command[1]
         hrestart = cmd.lower().startswith("dyno")
         hkill = cmd.lower().startswith("kill")
-    if hrestart and nodetails or hkill and nodetails:
+    if (hrestart and nodetails) or (hkill and nodetails):
         LOGGER.info("Heroku details is missing!")
         await sendMessage(
-            "<b>HEROKU_APP_NAME</b> or <b>HEROKU_API_KEY</b> not set!", message
+            "<b>HEROKU_APP_NAME</b> or <b>HEROKU_API_KEY</b> not set!",
+            message,
         )
         return
     if hrestart:
@@ -383,7 +352,8 @@ async def new_member(_, message: Message):
     for user in message.new_chat_members:
         try:
             image = await bot.download_media(
-                user.photo.big_file_id, file_name=f"./{user.id}.png"
+                user.photo.big_file_id,
+                file_name=f"./{user.id}.png",
             )
         except:
             image = config_dict["IMAGE_WEL"]
@@ -424,7 +394,7 @@ async def set_command():
                 BotCommand(
                     match.group(1).lower().strip(),
                     match.group(2).replace(":", "").strip(),
-                )
+                ),
             )
     await bot.set_bot_commands(commands)
 
@@ -447,7 +417,9 @@ async def restart_notification():
 
     notifier_dict = False
     async with bot_lock:
-        premium_message = "\nPremium leech enable 🥳!" if bot_dict["IS_PREMIUM"] else ""
+        premium_message = (
+            "\nPremium leech enable 🥳!" if bot_dict["IS_PREMIUM"] else ""
+        )
     if (
         INCOMPLETE_TASK_NOTIFIER
         and DATABASE_URL
@@ -470,7 +442,9 @@ async def restart_notification():
                     limit.text(msg)
                     if len(msg) - limit.total > 4090:
                         await send_incompelete_task_message(
-                            cid, msg, buttons.build_menu(2)
+                            cid,
+                            msg,
+                            buttons.build_menu(2),
                         )
                         msg = ""
             if msg:
@@ -501,29 +475,33 @@ async def main():
     bot.add_handler(MessageHandler(start, filters=command(BotCommands.StartCommand)))
     bot.add_handler(
         MessageHandler(
-            log, filters=command(BotCommands.LogCommand) & CustomFilters.owner
-        )
+            log,
+            filters=command(BotCommands.LogCommand) & CustomFilters.owner,
+        ),
     )
     bot.add_handler(
         MessageHandler(
-            restart, filters=command(BotCommands.RestartCommand) & CustomFilters.sudo
-        )
+            restart,
+            filters=command(BotCommands.RestartCommand) & CustomFilters.sudo,
+        ),
     )
     bot.add_handler(
         MessageHandler(
-            ping, filters=command(BotCommands.PingCommand) & CustomFilters.authorized
-        )
+            ping,
+            filters=command(BotCommands.PingCommand) & CustomFilters.authorized,
+        ),
     )
     bot.add_handler(
         MessageHandler(
             bot_help,
             filters=command(BotCommands.HelpCommand) & CustomFilters.authorized,
-        )
+        ),
     )
     bot.add_handler(
         MessageHandler(
-            stats, filters=command(BotCommands.StatsCommand) & CustomFilters.authorized
-        )
+            stats,
+            filters=command(BotCommands.StatsCommand) & CustomFilters.authorized,
+        ),
     )
     bot.add_handler(CallbackQueryHandler(help_query, filters=regex("help")))
     bot.add_handler(MessageHandler(new_member, filters=new_chat_members))

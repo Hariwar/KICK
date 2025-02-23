@@ -1,29 +1,30 @@
-from asyncio import sleep, gather
+from asyncio import gather, sleep
+
 from pyrogram.filters import command, regex
 from pyrogram.handlers import CallbackQueryHandler, MessageHandler
 from pyrogram.types import CallbackQuery, Message
 
 from bot import (
+    OWNER_ID,
     bot,
+    config_dict,
+    multi_tags,
     task_dict,
     task_dict_lock,
     user_data,
-    config_dict,
-    multi_tags,
-    OWNER_ID,
 )
 from bot.helper.ext_utils.bot_utils import new_task
-from bot.helper.ext_utils.status_utils import getTaskByGid, getAllTasks, MirrorStatus
+from bot.helper.ext_utils.status_utils import MirrorStatus, getAllTasks, getTaskByGid
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    sendingMessage,
     auto_delete_message,
     deleteMessage,
-    editPhoto,
     editMessage,
+    editPhoto,
+    sendingMessage,
+    sendMessage,
 )
 
 
@@ -49,7 +50,8 @@ async def cancel_task(_, message: Message):
             task = task_dict.get(reply_to_id)
         if not task:
             cancelmsg = await sendMessage(
-                f"{message.from_user.mention}, this is not an active task!", message
+                f"{message.from_user.mention}, this is not an active task!",
+                message,
             )
             await auto_delete_message(message, cancelmsg)
             return
@@ -59,13 +61,12 @@ async def cancel_task(_, message: Message):
         await auto_delete_message(message, cancelmsg)
         return
 
-    if (
-        OWNER_ID != user_id
-        and task.listener.user_id != user_id
-        and (user_id not in user_data or not user_data[user_id].get("is_sudo"))
+    if user_id not in (OWNER_ID, task.listener.user_id) and (
+        user_id not in user_data or not user_data[user_id].get("is_sudo")
     ):
         cancelmsg = await sendMessage(
-            f"{message.from_user.mention}, this task is not for you!", message
+            f"{message.from_user.mention}, this task is not for you!",
+            message,
         )
         await auto_delete_message(message, cancelmsg)
         return
@@ -144,7 +145,9 @@ async def cancel_all_update(_, query: CallbackQuery):
     if user_id != query.from_user.id:
         await query.answer("Not yours!", True)
         return
-    if data[2] == "all" and not await CustomFilters.sudo("", message.reply_to_message):
+    if data[2] == "all" and not await CustomFilters.sudo(
+        "", message.reply_to_message
+    ):
         await query.answer("What are you doing? It's say for sudo!!", True)
         return
     await query.answer()
@@ -153,7 +156,9 @@ async def cancel_all_update(_, query: CallbackQuery):
             await deleteMessage(message, message.reply_to_message)
         case "back":
             await editMessage(
-                "Choose tasks to cancel.", message, create_cancel_buttons(user_id)
+                "Choose tasks to cancel.",
+                message,
+                create_cancel_buttons(user_id),
             )
         case "ms":
             buttons = ButtonMaker()
@@ -189,12 +194,12 @@ bot.add_handler(
     MessageHandler(
         cancel_task,
         filters=command(BotCommands.CancelTaskCommand) & CustomFilters.authorized,
-    )
+    ),
 )
 bot.add_handler(
     MessageHandler(
         cancell_all_buttons,
         filters=command(BotCommands.CancelAllCommand) & CustomFilters.authorized,
-    )
+    ),
 )
 bot.add_handler(CallbackQueryHandler(cancel_all_update, filters=regex("^canall")))

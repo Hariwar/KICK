@@ -1,29 +1,35 @@
 from __future__ import annotations
-from aiofiles.os import path as aiopath, makedirs
+
 from ast import literal_eval
-from asyncio import Event, wait_for, wrap_future, gather
+from asyncio import Event, gather, wait_for, wrap_future
 from functools import partial
 from os import path as ospath
-from PIL import Image
-from pyrogram.filters import regex, user, text, photo, document
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Message, CallbackQuery
 from re import match as re_match
 from time import time
+from typing import TYPE_CHECKING
 
-from bot import config_dict, VID_MODE
+from aiofiles.os import path as aiopath
+from PIL import Image
+from pyrogram.filters import regex, user
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+
+from bot import VID_MODE, config_dict
 from bot.helper.ext_utils.bot_utils import new_task, new_thread, sync_to_async
 from bot.helper.ext_utils.files_utils import clean_target
 from bot.helper.ext_utils.links_utils import is_media
 from bot.helper.ext_utils.status_utils import get_readable_time
-from bot.helper.listeners import tasks_listener as task
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
     deleteMessage,
+    editMessage,
+    sendMessage,
 )
+
+if TYPE_CHECKING:
+    from pyrogram.types import CallbackQuery, Message
+
+    from bot.helper.listeners import tasks_listener as task
 
 
 class SelectMode:
@@ -45,7 +51,8 @@ class SelectMode:
         pfunc = partial(cb_vidtools, obj=self)
         handler = self.listener.client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^vidtool") & user(self.listener.user_id)
+                pfunc,
+                filters=regex("^vidtool") & user(self.listener.user_id),
             ),
             group=-1,
         )
@@ -62,7 +69,8 @@ class SelectMode:
     async def message_event_handler(self, mode=""):
         pfunc = partial(message_handler, obj=self, is_sub=mode == "subfile")
         handler = self.listener.client.add_handler(
-            MessageHandler(pfunc, user(self.listener.user_id)), group=1
+            MessageHandler(pfunc, user(self.listener.user_id)),
+            group=1,
         )
         try:
             await wait_for(self.message_event.wait(), timeout=60)
@@ -78,7 +86,7 @@ class SelectMode:
         else:
             await editMessage(text, self._reply, buttons)
 
-    def _captions(self, mode: str = None):
+    def _captions(self, mode: str | None = None):
         msg = (
             f"<b>VIDEOS TOOL SETTINGS</b>\nMode: <b>{vidmode}</b>"
             if (vidmode := VID_MODE.get(self.mode))
@@ -140,29 +148,39 @@ class SelectMode:
                 )
             case "trim":
                 msg += "\n\n<i>Send valid trim duration <b>hh:mm:ss hh:mm:ss</b></i>"
-        msg += f"\n\n<i>Time Out: {get_readable_time(180 - (time() - self._time))}</i>"
+        msg += (
+            f"\n\n<i>Time Out: {get_readable_time(180 - (time() - self._time))}</i>"
+        )
         return msg
 
     async def list_buttons(self, mode: str = ""):
         buttons, bnum = ButtonMaker(), 2
         if not mode:
-            vid_modes = dict(list(VID_MODE.items())[4:]) if self._isLink else VID_MODE
+            vid_modes = (
+                dict(list(VID_MODE.items())[4:]) if self._isLink else VID_MODE
+            )
             for key, value in vid_modes.items():
                 buttons.button_data(
-                    f"{'✅ ' if self.mode == key else ''}{value}", f"vidtool {key}"
+                    f"{'✅ ' if self.mode == key else ''}{value}",
+                    f"vidtool {key}",
                 )
             buttons.button_data(
-                f"{'✅ ' if self.newname else ''}Rename", "vidtool rename", "header"
+                f"{'✅ ' if self.newname else ''}Rename",
+                "vidtool rename",
+                "header",
             )
             buttons.button_data("Cancel", "vidtool cancel", "footer")
             if self.mode:
                 buttons.button_data("Done", "vidtool done", "footer")
             if self.mode in ("vid_sub", "watermark") and await CustomFilters.sudo(
-                "", self.listener.message
+                "",
+                self.listener.message,
             ):
                 hardsub = self.extra_data.get("hardsub")
                 buttons.button_data(
-                    f"{'✅ ' if hardsub else ''}Hardsub", "vidtool hardsub", "header"
+                    f"{'✅ ' if hardsub else ''}Hardsub",
+                    "vidtool hardsub",
+                    "header",
                 )
                 if hardsub:
                     if self.mode == "watermark":
@@ -173,26 +191,38 @@ class SelectMode:
                         )
                     buttons.button_data("Font Style", "vidtool fontstyle", "header")
 
-            if self.mode in ("compress", "watermark") or self.extra_data.get("hardsub"):
+            if self.mode in ("compress", "watermark") or self.extra_data.get(
+                "hardsub"
+            ):
                 buttons.button_data("Quality", "vidtool quality", "header")
             if self.mode == "watermark":
                 buttons.button_data("Popup", "vidtool popupwm", "header")
         else:
 
             def _buttons_style(
-                name=True, size=True, colour=True, position="header", cb="fontstyle"
+                name=True,
+                size=True,
+                colour=True,
+                position="header",
+                cb="fontstyle",
             ):
                 if name:
                     buttons.button_data(
-                        "Font Name", "vidtool fontstyle fontname", position
+                        "Font Name",
+                        "vidtool fontstyle fontname",
+                        position,
                     )
                 if size:
                     buttons.button_data(
-                        "Font Size", "vidtool fontstyle fontsize", position
+                        "Font Size",
+                        "vidtool fontstyle fontsize",
+                        position,
                     )
                 if colour:
                     buttons.button_data(
-                        "Font Colour", "vidtool fontstyle fontcolour", position
+                        "Font Colour",
+                        "vidtool fontstyle fontcolour",
+                        position,
                     )
                 buttons.button_data("<<", f"vidtool {cb}", "footer")
                 buttons.button_data("Done", "vidtool done", "footer")
@@ -291,10 +321,12 @@ class SelectMode:
                 case "wmposition":
                     buttons.button_data("Top Left", "vidtool wmposition 5:5")
                     buttons.button_data(
-                        "Top Right", "vidtool wmposition main_w-overlay_w-5:5"
+                        "Top Right",
+                        "vidtool wmposition main_w-overlay_w-5:5",
                     )
                     buttons.button_data(
-                        "Bottom Left", "vidtool wmposition 5:main_h-overlay_h"
+                        "Bottom Left",
+                        "vidtool wmposition 5:main_h-overlay_h",
                     )
                     buttons.button_data(
                         "Bottom Right",
@@ -310,7 +342,7 @@ class SelectMode:
         await gather(self.list_buttons(), wrap_future(future))
         if self.is_cancelled:
             await editMessage(self.mode, self._reply)
-            return
+            return None
         await deleteMessage(self._reply)
         return [self.mode, self.newname, self.extra_data]
 
@@ -323,15 +355,17 @@ async def message_handler(_, message: Message, obj: SelectMode, is_sub=False):
     elif obj.mode == "watermark" and (media := is_media(message)):
         if is_sub:
             if message.document and not media.file_name.lower().endswith(
-                (".ass", ".srt")
+                (".ass", ".srt"),
             ):
                 await sendMessage("Only .ass or .srt allowed!", message)
                 return
             obj.extra_data["subfile"] = await message.download(
-                ospath.join("watermark", media.file_id)
+                ospath.join("watermark", media.file_id),
             )
         else:
-            if message.document and "image" not in getattr(media, "mime_type", "None"):
+            if message.document and "image" not in getattr(
+                media, "mime_type", "None"
+            ):
                 await sendMessage("Only image document allowed!", message)
                 return
             fpath = await message.download(ospath.join("watermark", media.file_id))
@@ -344,10 +378,11 @@ async def message_handler(_, message: Message, obj: SelectMode, is_sub=False):
             data = "wmsize"
     elif obj.mode == "trim" and message.text:
         if match := re_match(
-            r"(\d{2}:\d{2}:\d{2})\s(\d{2}:\d{2}:\d{2})", message.text.strip()
+            r"(\d{2}:\d{2}:\d{2})\s(\d{2}:\d{2}:\d{2})",
+            message.text.strip(),
         ):
             obj.extra_data.update(
-                {"start_time": match.group(1), "end_time": match.group(2)}
+                {"start_time": match.group(1), "end_time": match.group(2)},
             )
         else:
             await sendMessage("Invalid trim duration format!", message)
@@ -378,7 +413,9 @@ async def cb_vidtools(_, query: CallbackQuery, obj: SelectMode):
             obj.event.set()
         case "quality" | "popupwm" as value:
             if len(data) == 3:
-                obj.extra_data[value] = data[2] if value == "quality" else int(data[2])
+                obj.extra_data[value] = (
+                    data[2] if value == "quality" else int(data[2])
+                )
             await obj.list_buttons(value)
         case "hardsub":
             hmode = not bool(obj.extra_data.get("hardsub"))

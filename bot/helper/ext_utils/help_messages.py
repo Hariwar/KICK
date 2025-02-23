@@ -1,8 +1,8 @@
 from html import escape
 
 from bot import config_dict
-from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.bot_commands import BotCommands
+from bot.helper.telegram_helper.button_build import ButtonMaker
 
 
 class UsetString:
@@ -508,7 +508,11 @@ class CMDS:
 
 
 HELP = {
-    "Aria": [f"<b>ARIA COMMANDS</b>\n{CMDS.ARIA}", config_dict["IMAGE_ARIA"], "home"],
+    "Aria": [
+        f"<b>ARIA COMMANDS</b>\n{CMDS.ARIA}",
+        config_dict["IMAGE_ARIA"],
+        "home",
+    ],
     "qBit": [
         f"<b>QBITTORRENT COMMANDS</b>\n{CMDS.QBIT}",
         config_dict["IMAGE_QBIT"],
@@ -520,8 +524,16 @@ HELP = {
         "home",
     ],
     "YTDL": [f"<b>YTDL COMMANDS</b>\n{CMDS.YTDL}", config_dict["IMAGE_YT"], "home"],
-    "Drive": [f"<b>GDRIVE COMMANDS</b>\n{CMDS.DRIVE}", config_dict["IMAGE_GD"], "home"],
-    "User": [f"<b>USER COMMANDS</b>\n{CMDS.USER}", config_dict["IMAGE_USER"], "home"],
+    "Drive": [
+        f"<b>GDRIVE COMMANDS</b>\n{CMDS.DRIVE}",
+        config_dict["IMAGE_GD"],
+        "home",
+    ],
+    "User": [
+        f"<b>USER COMMANDS</b>\n{CMDS.USER}",
+        config_dict["IMAGE_USER"],
+        "home",
+    ],
     "Owner": [
         f"<b>OWNER COMMANDS</b>\n{CMDS.OWNER}",
         config_dict["IMAGE_OWNER"],
@@ -625,7 +637,7 @@ HELP = {
 }
 
 
-def get_help_button(from_user: int, data: str = None):
+def get_help_button(from_user: int, data: str | None = None):
     buttons = ButtonMaker()
 
     def _build_button(btns: list[set], back=True):
@@ -663,7 +675,14 @@ def get_help_button(from_user: int, data: str = None):
         "TG Link",
         "Bulk ML",
     ]
-    ytdl_menu = ["Basic YL", "Options", "YRClone", "GoFile YL", "Multi YL", "Bulk YL"]
+    ytdl_menu = [
+        "Basic YL",
+        "Options",
+        "YRClone",
+        "GoFile YL",
+        "Multi YL",
+        "Bulk YL",
+    ]
 
     if not data or data == "back":
         text, image = (

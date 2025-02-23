@@ -1,22 +1,23 @@
-from aiofiles.os import path as aiopath
 from asyncio import Event, sleep
 from os import path as ospath
 
+from aiofiles.os import path as aiopath
+
 from bot import (
+    LOGGER,
     config_dict,
+    non_queued_dl,
+    non_queued_up,
+    queue_dict_lock,
     queued_dl,
     queued_up,
-    non_queued_up,
-    non_queued_dl,
-    queue_dict_lock,
-    LOGGER,
 )
 from bot.helper.ext_utils.bot_utils import (
-    sync_to_async,
-    presuf_remname_name,
     is_premium_user,
+    presuf_remname_name,
+    sync_to_async,
 )
-from bot.helper.ext_utils.files_utils import get_base_name, check_storage_threshold
+from bot.helper.ext_utils.files_utils import check_storage_threshold, get_base_name
 from bot.helper.ext_utils.links_utils import is_gdrive_id, is_mega_link
 from bot.helper.mirror_utils.gdrive_utlis.search import gdSearch
 
@@ -42,7 +43,7 @@ async def stop_duplicate_check(listener):
             name = None
     if name:
         if not listener.isRename and await aiopath.isfile(
-            ospath.join(listener.dir, name)
+            ospath.join(listener.dir, name),
         ):
             name = presuf_remname_name(listener.user_dict, name)
         count, file = await sync_to_async(
@@ -76,7 +77,9 @@ async def check_limits_size(listener, size, playlist=False, play_count=False):
     if torddl and not arch and size >= torddl * 1024**3:
         msgerr = f"Torrent/direct limit is {torddl}GB"
     elif (
-        zuzdl and any([listener.compress, listener.extract]) and size >= zuzdl * 1024**3
+        zuzdl
+        and any([listener.compress, listener.extract])
+        and size >= zuzdl * 1024**3
     ):
         msgerr = f"Zip/Unzip limit is {zuzdl}GB"
     elif leechdl and listener.isLeech and size >= leechdl * 1024**3:
@@ -84,7 +87,9 @@ async def check_limits_size(listener, size, playlist=False, play_count=False):
     if is_mega_link(listener.link) and megadl and size >= megadl * 1024**3:
         msgerr = f"Mega limit is {megadl}GB"
     if max_pyt and playlist and (play_count > max_pyt):
-        msgerr = f"Only {max_pyt} playlist allowed. Current playlist is {play_count}."
+        msgerr = (
+            f"Only {max_pyt} playlist allowed. Current playlist is {play_count}."
+        )
     if storage and not await check_storage_threshold(size, arch):
         msgerr = f"Need {storage}GB free storage"
     return msgerr
@@ -93,7 +98,9 @@ async def check_limits_size(listener, size, playlist=False, play_count=False):
 async def check_running_tasks(mid: int, state="dl"):
     all_limit = config_dict["QUEUE_ALL"]
     state_limit = (
-        config_dict["QUEUE_DOWNLOAD"] if state == "dl" else config_dict["QUEUE_UPLOAD"]
+        config_dict["QUEUE_DOWNLOAD"]
+        if state == "dl"
+        else config_dict["QUEUE_UPLOAD"]
     )
     event = None
     is_over_limit = False

@@ -1,31 +1,34 @@
-from aiofiles.os import path as aiopath, makedirs
 from ast import literal_eval
-from asyncio import sleep, gather, Event, wait_for, wrap_future
+from asyncio import Event, gather, sleep, wait_for, wrap_future
 from functools import partial
 from html import escape
-from os import path as ospath, getcwd
-from pyrogram import Client
-from pyrogram.filters import command, regex, create, user
-from pyrogram.handlers import CallbackQueryHandler, MessageHandler
-from pyrogram.types import CallbackQuery, Message
+from os import getcwd
+from os import path as ospath
 from time import time
 
+from aiofiles.os import makedirs
+from aiofiles.os import path as aiopath
+from pyrogram import Client
+from pyrogram.filters import command, create, regex, user
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+from pyrogram.types import CallbackQuery, Message
+
 from bot import (
-    bot,
-    bot_loop,
-    bot_dict,
-    bot_lock,
-    user_data,
-    config_dict,
     DATABASE_URL,
     GLOBAL_EXTENSION_FILTER,
+    bot,
+    bot_dict,
+    bot_lock,
+    bot_loop,
+    config_dict,
+    user_data,
 )
 from bot.helper.ext_utils.bot_utils import (
-    update_user_ldata,
     UserDaily,
-    new_thread,
-    new_task,
     is_premium_user,
+    new_task,
+    new_thread,
+    update_user_ldata,
 )
 from bot.helper.ext_utils.commons_check import UseCheck
 from bot.helper.ext_utils.conf_loads import intialize_savebot
@@ -33,21 +36,23 @@ from bot.helper.ext_utils.db_handler import DbManager
 from bot.helper.ext_utils.files_utils import clean_target
 from bot.helper.ext_utils.help_messages import UsetString
 from bot.helper.ext_utils.media_utils import createThumb
-from bot.helper.ext_utils.status_utils import get_readable_time, get_readable_file_size
+from bot.helper.ext_utils.status_utils import (
+    get_readable_file_size,
+    get_readable_time,
+)
 from bot.helper.ext_utils.telegram_helper import TeleContent
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
     auto_delete_message,
-    sendPhoto,
-    editPhoto,
     deleteMessage,
     editMessage,
+    editPhoto,
     sendCustom,
+    sendMessage,
+    sendPhoto,
 )
-
 
 handler_dict = {}
 
@@ -80,7 +85,7 @@ async def get_user_settings(from_user, data: str, uset_data: str):
         AD = config_dict["AS_DOCUMENT"]
         ltype, buttonkey = (
             ("DOCUMENT", "✅ As Document")
-            if not user_dict and AD or user_dict.get("as_doc")
+            if (not user_dict and AD) or user_dict.get("as_doc")
             else ("MEDIA", "As Document")
         )
         buttons.button_data(buttonkey, f"userset {user_id} as_doc")
@@ -88,7 +93,8 @@ async def get_user_settings(from_user, data: str, uset_data: str):
         MG = config_dict["MEDIA_GROUP"]
         mediagroup, buttonkey = (
             ("ENABLE ✅", "✅ As Group")
-            if user_dict.get("media_group") or "media_group" not in user_dict and MG
+            if user_dict.get("media_group")
+            or ("media_group" not in user_dict and MG)
             else ("DISABLE", "As Group")
         )
         buttons.button_data(buttonkey, f"userset {user_id} media_group")
@@ -155,7 +161,9 @@ async def get_user_settings(from_user, data: str, uset_data: str):
         du = "GDrive API" if default_upload == "gd" else "RClone"
         dub = "GDRIVE" if default_upload != "gd" else "RCLONE"
         buttons.button_data(
-            f"Engine {dub}", f"userset {user_id} {default_upload}", "header"
+            f"Engine {dub}",
+            f"userset {user_id} {default_upload}",
+            "header",
         )
 
         YOPT = config_dict["YT_DLP_OPTIONS"]
@@ -243,7 +251,7 @@ async def get_user_settings(from_user, data: str, uset_data: str):
         )
         text += f"<i>┖ Leech Split Size ~ {get_readable_file_size(config_dict['LEECH_SPLIT_SIZE'])}</i>"
         if user_dict.get("rclone_path", "").startswith(
-            "mrcc"
+            "mrcc",
         ) and not await aiopath.exists(rclone_path):
             text += "\n<i>┖ Using custom rclone path but user rclone not found, mirror upload will fail!</i>"
 
@@ -269,7 +277,10 @@ async def get_user_settings(from_user, data: str, uset_data: str):
 
         cap_modes = ["mono", "italic", "bold", "normal"]
         cap_modes.remove(user_cap)
-        caption, fnamecap = user_dict.get("captions"), user_dict.get("fnamecap", True)
+        caption, fnamecap = (
+            user_dict.get("captions"),
+            user_dict.get("fnamecap", True),
+        )
         if not user_dict or fnamecap:
             [
                 buttons.button_data(mode.title(), f"userset {user_id} cap{mode}")
@@ -282,7 +293,8 @@ async def get_user_settings(from_user, data: str, uset_data: str):
         buttons.button_data("Back", f"userset {user_id} back")
         if caption:
             buttons.button_data(
-                "✅ FCaption" if fnamecap else "FCaption", f"userset {user_id} fnamecap"
+                "✅ FCaption" if fnamecap else "FCaption",
+                f"userset {user_id} fnamecap",
             )
             custom_cap = f"\n<code>{escape(caption)}</code>"
             if fnamecap:
@@ -351,10 +363,8 @@ async def get_user_settings(from_user, data: str, uset_data: str):
         )
         buttons.button_data(buttonkey, f"userset {user_id} setdata token_pickle")
 
-        stop_dup = (
-            user_dict.get("stop_duplicate")
-            or "stop_duplicate" not in user_dict
-            and config_dict["STOP_DUPLICATE"]
+        stop_dup = user_dict.get("stop_duplicate") or (
+            "stop_duplicate" not in user_dict and config_dict["STOP_DUPLICATE"]
         )
         stop_dup_msg, buttonkey = (
             ("ENABLE ✅", "✅ Stop Duplicate")
@@ -362,7 +372,9 @@ async def get_user_settings(from_user, data: str, uset_data: str):
             else ("DISABLE", "Stop Duplicate")
         )
         buttons.button_data(
-            buttonkey, f"userset {user_id} stop_duplicate {stop_dup}", "header"
+            buttonkey,
+            f"userset {user_id} stop_duplicate {stop_dup}",
+            "header",
         )
 
         if await aiopath.exists("accounts"):
@@ -372,7 +384,9 @@ async def get_user_settings(from_user, data: str, uset_data: str):
                 else ("DISABLE", "Use SA")
             )
             buttons.button_data(
-                buttonkey, f"userset {user_id} use_sa {use_sa}", "header"
+                buttonkey,
+                f"userset {user_id} use_sa {use_sa}",
+                "header",
             )
         else:
             use_sa = "NOT AVAILABLE"
@@ -441,14 +455,17 @@ async def get_user_settings(from_user, data: str, uset_data: str):
             file_path, butkey, text, image, qdata = file_dict[uset_data]
             if await aiopath.exists(file_path):
                 buttons.button_data(
-                    f"Change {butkey}", f"userset {user_id} prepare {uset_data}"
+                    f"Change {butkey}",
+                    f"userset {user_id} prepare {uset_data}",
                 )
                 buttons.button_data(
-                    f"Delete {butkey}", f"userset {user_id} rem_{uset_data}"
+                    f"Delete {butkey}",
+                    f"userset {user_id} rem_{uset_data}",
                 )
             else:
                 buttons.button_data(
-                    f"Set {butkey}", f"userset {user_id} prepare {uset_data}"
+                    f"Set {butkey}",
+                    f"userset {user_id} prepare {uset_data}",
                 )
         else:
             uset_dict = {
@@ -558,13 +575,20 @@ async def get_user_settings(from_user, data: str, uset_data: str):
                 )
 
             key, butkey, text, image, qdata = uset_dict[uset_data]
-            if user_dict.get(key) or key == "yt_opt" and config_dict["YT_DLP_OPTIONS"]:
+            if user_dict.get(key) or (
+                key == "yt_opt" and config_dict["YT_DLP_OPTIONS"]
+            ):
                 buttons.button_data(
-                    f"Change {butkey}", f"userset {user_id} prepare {key}"
+                    f"Change {butkey}",
+                    f"userset {user_id} prepare {key}",
                 )
-                buttons.button_data(f"Remove {butkey}", f"userset {user_id} rem_{key}")
+                buttons.button_data(
+                    f"Remove {butkey}", f"userset {user_id} rem_{key}"
+                )
             else:
-                buttons.button_data(f"Set {butkey}", f"userset {user_id} prepare {key}")
+                buttons.button_data(
+                    f"Set {butkey}", f"userset {user_id} prepare {key}"
+                )
         if qdata:
             buttons.button_data("Back", f"userset {user_id} {qdata}")
         text = text.replace("Timeout: 60s.", "")
@@ -625,12 +649,14 @@ async def get_user_settings(from_user, data: str, uset_data: str):
 
 
 async def update_user_settings(
-    query: CallbackQuery, data: str = None, uset_data: str = None
+    query: CallbackQuery,
+    data: str | None = None,
+    uset_data: str | None = None,
 ):
     text, image, button = await get_user_settings(query.from_user, data, uset_data)
     if not image:
         if await aiopath.exists(
-            thumb := ospath.join("thumbnails", f"{query.from_user.id}.jpg")
+            thumb := ospath.join("thumbnails", f"{query.from_user.id}.jpg"),
         ):
             image = thumb
         else:
@@ -642,7 +668,7 @@ async def set_user_settings(_, message: Message, query: CallbackQuery, key: str)
     user_id = message.from_user.id
     handler_dict[user_id] = False
     value: str = message.text
-    if key == "dump_ch" and value.isdigit() or value.startswith("-100"):
+    if (key == "dump_ch" and value.isdigit()) or value.startswith("-100"):
         value = int(value)
     elif key == "excluded_extensions":
         fx = value.split()
@@ -669,7 +695,8 @@ async def set_user_settings(_, message: Message, query: CallbackQuery, key: str)
                 save_bot = bot_dict[user_id]["SAVEBOT"]
             if not save_bot:
                 msg = await sendMessage(
-                    "Something went wrong, or invalid string!", message
+                    "Something went wrong, or invalid string!",
+                    message,
                 )
                 await update_user_ldata(user_id, key, "")
                 bot_loop.create_task(auto_delete_message(message, msg, stime=5))
@@ -705,7 +732,9 @@ async def add_rclone_pickle(_, message: Message, query: CallbackQuery, key: str)
         qdata = "rctool" if key == "rclone_config" else "gdtool"
         await gather(
             update_user_ldata(
-                user_id, file_path, ospath.join(file_path, f"{user_id}{ext_file}")
+                user_id,
+                file_path,
+                ospath.join(file_path, f"{user_id}{ext_file}"),
             ),
             deleteMessage(message, msg),
             update_user_settings(query, qdata),
@@ -768,7 +797,8 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
         case "gd" | "rc" as value:
             du = "rc" if value == "gd" else "gd"
             await gather(
-                query.answer(), update_user_ldata(user_id, "default_upload", du)
+                query.answer(),
+                update_user_ldata(user_id, "default_upload", du),
             )
             await update_user_settings(query)
         case "back":
@@ -802,15 +832,21 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
                     qdata = "rctool"
                 case "rem_index_url" | "rem_gdrive_id":
                     qdata = "gdtool"
-            if value in ("rem_rclone_path", "rem_gdrive_id") and value in user_data.get(
-                user_id, {}
+            if value in (
+                "rem_rclone_path",
+                "rem_gdrive_id",
+            ) and value in user_data.get(
+                user_id,
+                {},
             ):
                 del user_data[user_id][value]
                 if DATABASE_URL:
                     await DbManager().update_user_data(user_id)
             else:
                 await update_user_ldata(user_id, value[4:], "")
-            await gather(query.answer(), update_user_settings(query, qdata, uset_data))
+            await gather(
+                query.answer(), update_user_settings(query, qdata, uset_data)
+            )
         case (
             "enable_pm"
             | "enable_ss"
@@ -826,7 +862,9 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
                 qdata = "capmode"
             if value in ("stop_duplicate", "use_sa"):
                 qdata = "gdtool"
-            await gather(query.answer(), update_user_settings(query, qdata, uset_data))
+            await gather(
+                query.answer(), update_user_settings(query, qdata, uset_data)
+            )
         case "capmode" | "gdtool" | "rctool" as value:
             await gather(query.answer(), update_user_settings(query, value))
         case "zipmode":
@@ -837,7 +875,9 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
             if zmode == user_dict.get("zipmode", "") and len(data) == 4:
                 await query.answer("Already Selected!", True)
                 return
-            await gather(query.answer(), update_user_ldata(user_id, "zipmode", zmode))
+            await gather(
+                query.answer(), update_user_ldata(user_id, "zipmode", zmode)
+            )
             await update_user_settings(query, "zipmode", zmode)
         case "capmono" | "capitalic" | "capbold" | "capnormal" as value:
             await update_user_ldata(user_id, "caption_style", value.lstrip("cap"))
@@ -845,7 +885,8 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
         case "close":
             handler_dict[user_id] = False
             await gather(
-                query.answer(), deleteMessage(message, message.reply_to_message)
+                query.answer(),
+                deleteMessage(message, message.reply_to_message),
             )
         case "rem_thumb" | "rem_rclone_config" | "rem_token_pickle" as value:
             match value:
@@ -864,7 +905,8 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
                     await DbManager().update_user_doc(user_id, key)
             else:
                 await gather(
-                    query.answer("Old Settings", True), update_user_settings(query)
+                    query.answer("Old Settings", True),
+                    update_user_settings(query),
                 )
         case "prepare":
             match data[3]:
@@ -879,7 +921,8 @@ async def edit_user_settings(client: Client, query: CallbackQuery):
                 case _:
                     handler_dict[user_id] = True
                     await query.answer(
-                        "Don't forget add me to your chat!", True
+                        "Don't forget add me to your chat!",
+                        True,
                     ) if data[3] == "dump_ch" else await query.answer()
                     photo = document = False
                     pfunc = partial(set_user_settings, query=query, key=data[3])
@@ -909,11 +952,12 @@ async def event_handler(
             mtype = event.text
         user = event.from_user or event.sender_chat
         return bool(
-            user.id == user_id and event.chat.id == query.message.chat.id and mtype
+            user.id == user_id and event.chat.id == query.message.chat.id and mtype,
         )
 
     handler = client.add_handler(
-        MessageHandler(pfunc, filters=create(event_filter)), group=-1
+        MessageHandler(pfunc, filters=create(event_filter)),
+        group=-1,
     )
     while handler_dict[user_id]:
         await sleep(0.5)
@@ -932,7 +976,7 @@ async def user_settings(_, message: Message):
         return
     msg, image, buttons = await get_user_settings(from_user, None, None)
     if await aiopath.exists(
-        thumb := ospath.join("thumbnails", f"{message.from_user.id}.jpg")
+        thumb := ospath.join("thumbnails", f"{message.from_user.id}.jpg"),
     ):
         image = thumb
     await sendPhoto(msg, message, image or config_dict["IMAGE_USETIINGS"], buttons)
@@ -975,7 +1019,9 @@ async def set_premium_users(_, message: Message):
     if args[1] == "add":
         duartion = int(time() + (86400 * day))
         text = f"🌚 Yeay, <b>{premi_id}</b> has been added as <b>Premium User</b> for {day} day(s)."
-        user_text = f"Yeay 🌚, you have been added as <b>Premium User</b> for {day}(s)."
+        user_text = (
+            f"Yeay 🌚, you have been added as <b>Premium User</b> for {day}(s)."
+        )
         await gather(
             update_user_ldata(premi_id, "premium_left", duartion),
             update_user_ldata(premi_id, "is_premium", True),
@@ -999,7 +1045,8 @@ async def reset_daily_limit(_, message: Message):
     args = message.text.split()
     if not reply_to and len(args) == 1:
         await sendMessage(
-            "Reply to a user or send user ID to reset daily limit.", message
+            "Reply to a user or send user ID to reset daily limit.",
+            message,
         )
         return
     if reply_to:
@@ -1077,7 +1124,8 @@ async def send_users_settings(client: Client, message: Message):
         pfunc = partial(users_handler, event=event, tele=tele)
         handler = client.add_handler(
             CallbackQueryHandler(
-                pfunc, filters=regex("^usettings") & user(message.from_user.id)
+                pfunc,
+                filters=regex("^usettings") & user(message.from_user.id),
             ),
             group=-1,
         )
@@ -1116,21 +1164,21 @@ bot.add_handler(
     MessageHandler(
         set_premium_users,
         filters=command(BotCommands.UserSetPremiCommand) & CustomFilters.sudo,
-    )
+    ),
 )
 bot.add_handler(
     MessageHandler(
         send_users_settings,
         filters=command(BotCommands.UsersCommand) & CustomFilters.sudo,
-    )
+    ),
 )
 bot.add_handler(
     MessageHandler(
         reset_daily_limit,
         filters=command(BotCommands.DailyResetCommand) & CustomFilters.sudo,
-    )
+    ),
 )
 bot.add_handler(
-    MessageHandler(user_settings, filters=command(BotCommands.UserSetCommand))
+    MessageHandler(user_settings, filters=command(BotCommands.UserSetCommand)),
 )
 bot.add_handler(CallbackQueryHandler(edit_user_settings, filters=regex("^userset")))

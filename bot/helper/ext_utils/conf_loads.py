@@ -1,39 +1,39 @@
-from aiofiles import open as aiopen
-from aiofiles.os import path as aiopath
 from asyncio import create_subprocess_exec, create_subprocess_shell, gather
 from os import environ
+
+from aiofiles import open as aiopen
+from aiofiles.os import path as aiopath
 from pyrogram import Client
 
 from bot import (
-    bot_dict,
-    bot_lock,
-    aria2,
-    aria2_options,
-    config_dict,
-    user_data,
-    task_dict,
-    images,
-    Intervals,
-    kwargs,
-    LOGGER,
-    GLOBAL_EXTENSION_FILTER,
     DEFAULT_SPLIT_SIZE,
     DRIVES_IDS,
     DRIVES_NAMES,
+    GLOBAL_EXTENSION_FILTER,
     INDEX_URLS,
+    LOGGER,
     SHORTENER_APIS,
     SHORTENERES,
+    Intervals,
+    aria2,
+    aria2_options,
+    bot_dict,
+    bot_lock,
+    config_dict,
+    images,
+    kwargs,
+    task_dict,
+    user_data,
 )
 from bot.helper.ext_utils.bot_utils import setInterval, sync_to_async
 from bot.helper.ext_utils.db_handler import DbManager
 from bot.helper.ext_utils.files_utils import clean_target
 from bot.helper.ext_utils.task_manager import start_from_queued
 from bot.helper.mirror_utils.rclone_utils.serve import rclone_serve_booter
-from bot.helper.stream_utils.web_services import start_server, server
+from bot.helper.stream_utils.web_services import server, start_server
 from bot.helper.telegram_helper.message_utils import update_status_message
 from bot.modules.rss import addJob
 from bot.modules.torrent_search import initiate_search_tools
-
 
 default_values = {
     "AUTO_DELETE_MESSAGE_DURATION": 30,
@@ -240,9 +240,11 @@ async def load_config():
     USER_SESSION_STRING = environ.get("USER_SESSION_STRING", "")
     SAVE_SESSION_STRING = environ.get("SAVE_SESSION_STRING", "")
     USERBOT_LEECH = environ.get("USERBOT_LEECH", "False").lower() == "true"
-    AUTO_DELETE_MESSAGE_DURATION = int(environ.get("AUTO_DELETE_MESSAGE_DURATION", 30))
+    AUTO_DELETE_MESSAGE_DURATION = int(
+        environ.get("AUTO_DELETE_MESSAGE_DURATION", 30)
+    )
     AUTO_DELETE_UPLOAD_MESSAGE_DURATION = int(
-        environ.get("AUTO_DELETE_UPLOAD_MESSAGE_DURATION", 0)
+        environ.get("AUTO_DELETE_UPLOAD_MESSAGE_DURATION", 0),
     )
     YT_DLP_OPTIONS = environ.get("YT_DLP_OPTIONS", "")
     DAILY_LIMIT_SIZE = int(environ.get("DAILY_LIMIT_SIZE", 2))
@@ -254,7 +256,8 @@ async def load_config():
     HARDSUB_FONT_NAME = environ.get("HARDSUB_FONT_NAME", "TEAM MOVIES")
     DISABLE_VIDTOOLS = environ.get("DISABLE_VIDTOOLS", "compress convert watermark")
     DISABLE_MULTI_VIDTOOLS = environ.get(
-        "DISABLE_MULTI_VIDTOOLS", "compress rmstream extract trim watermark convert"
+        "DISABLE_MULTI_VIDTOOLS",
+        "compress rmstream extract trim watermark convert",
     )
     START_MESSAGE = environ.get("START_MESSAGE", "")
     STATUS_UPDATE_INTERVAL = int(environ.get("STATUS_UPDATE_INTERVAL", 5))
@@ -262,7 +265,9 @@ async def load_config():
         for key, intvl in list(st.items()):
             intvl.cancel()
             Intervals["status"][key] = setInterval(
-                STATUS_UPDATE_INTERVAL, update_status_message, key
+                STATUS_UPDATE_INTERVAL,
+                update_status_message,
+                key,
             )
 
     INCOMPLETE_TASK_NOTIFIER = (
@@ -285,7 +290,9 @@ async def load_config():
     # ======================================================================
 
     # ============================== LOGS ==================================
-    ONCOMPLETE_LEECH_LOG = environ.get("ONCOMPLETE_LEECH_LOG", "True").lower() == "true"
+    ONCOMPLETE_LEECH_LOG = (
+        environ.get("ONCOMPLETE_LEECH_LOG", "True").lower() == "true"
+    )
     LEECH_LOG = environ.get("LEECH_LOG", "")
     LEECH_LOG = (
         int(LEECH_LOG)
@@ -335,7 +342,9 @@ async def load_config():
     STATUS_LIMIT = int(STATUS_LIMIT) if STATUS_LIMIT else 10
 
     TORRENT_DIRECT_LIMIT = environ.get("TORRENT_DIRECT_LIMIT", "")
-    TORRENT_DIRECT_LIMIT = float(TORRENT_DIRECT_LIMIT) if TORRENT_DIRECT_LIMIT else ""
+    TORRENT_DIRECT_LIMIT = (
+        float(TORRENT_DIRECT_LIMIT) if TORRENT_DIRECT_LIMIT else ""
+    )
 
     TOTAL_TASKS_LIMIT = environ.get("TOTAL_TASKS_LIMIT", "")
     TOTAL_TASKS_LIMIT = int(TOTAL_TASKS_LIMIT) if TOTAL_TASKS_LIMIT else ""
@@ -387,149 +396,197 @@ async def load_config():
     # ============================= IMAGES =================================
     ENABLE_IMAGE_MODE = environ.get("ENABLE_IMAGE_MODE", "True").lower() == "true"
     IMAGE_ARIA = environ.get(
-        "IMAGE_ARIA", "https://graph.org/file/24e3bbaa805d49823eddd.png"
+        "IMAGE_ARIA",
+        "https://graph.org/file/24e3bbaa805d49823eddd.png",
     )
     IMAGE_AUTH = environ.get(
-        "IMAGE_AUTH", "https://graph.org/file/e6bfb75ad099e7d3664e0.png"
+        "IMAGE_AUTH",
+        "https://graph.org/file/e6bfb75ad099e7d3664e0.png",
     )
     IMAGE_BOLD = environ.get(
-        "IMAGE_BOLD", "https://graph.org/file/d81b39cf4bf75b15c536b.png"
+        "IMAGE_BOLD",
+        "https://graph.org/file/d81b39cf4bf75b15c536b.png",
     )
     IMAGE_BYE = environ.get(
-        "IMAGE_BYE", "https://graph.org/file/95530c7749ebc00c5c6ed.png"
+        "IMAGE_BYE",
+        "https://graph.org/file/95530c7749ebc00c5c6ed.png",
     )
     IMAGE_CANCEL = environ.get(
-        "IMAGE_CANCEL", "https://graph.org/file/86c4c933b7f106ed5edd8.png"
+        "IMAGE_CANCEL",
+        "https://graph.org/file/86c4c933b7f106ed5edd8.png",
     )
     IMAGE_CAPTION = environ.get(
-        "IMAGE_CAPTION", "https://graph.org/file/b430ad0a09dd01895cc1a.png"
+        "IMAGE_CAPTION",
+        "https://graph.org/file/b430ad0a09dd01895cc1a.png",
     )
     IMAGE_COMMONS_CHECK = environ.get(
-        "IMAGE_COMMONS_CHECK", "https://graph.org/file/672ade2552f8b3e9e1a73.png"
+        "IMAGE_COMMONS_CHECK",
+        "https://graph.org/file/672ade2552f8b3e9e1a73.png",
     )
     IMAGE_COMPLETE = environ.get("IMAGE_COMPLETE", images)
     IMAGE_CONEDIT = environ.get(
-        "IMAGE_CONEDIT", "https://graph.org/file/46b769fc94f22e97c0abd.png"
+        "IMAGE_CONEDIT",
+        "https://graph.org/file/46b769fc94f22e97c0abd.png",
     )
     IMAGE_CONPRIVATE = environ.get(
-        "IMAGE_CONPRIVATE", "https://graph.org/file/8de9925ed509c9307e267.png"
+        "IMAGE_CONPRIVATE",
+        "https://graph.org/file/8de9925ed509c9307e267.png",
     )
     IMAGE_CONSET = environ.get(
-        "IMAGE_CONSET", "https://graph.org/file/25ea7ae75e9ceac315826.png"
+        "IMAGE_CONSET",
+        "https://graph.org/file/25ea7ae75e9ceac315826.png",
     )
     IMAGE_CONVIEW = environ.get(
-        "IMAGE_CONVIEW", "https://graph.org/file/ab51c10fb28ef66482a1b.png"
+        "IMAGE_CONVIEW",
+        "https://graph.org/file/ab51c10fb28ef66482a1b.png",
     )
     IMAGE_DUMP = environ.get(
-        "IMAGE_DUMP", "https://graph.org/file/ea990868f925440392ba7.png"
+        "IMAGE_DUMP",
+        "https://graph.org/file/ea990868f925440392ba7.png",
     )
     IMAGE_EXTENSION = environ.get(
-        "IMAGE_EXTENSION", "https://telegra.ph/file/e0350e6414bbc0516d10d.png"
+        "IMAGE_EXTENSION",
+        "https://telegra.ph/file/e0350e6414bbc0516d10d.png",
     )
     IMAGE_GD = environ.get(
-        "IMAGE_GD", "https://graph.org/file/f1ebf50425a0fcb2bd01a.png"
+        "IMAGE_GD",
+        "https://graph.org/file/f1ebf50425a0fcb2bd01a.png",
     )
     IMAGE_HELP = environ.get(
-        "IMAGE_HELP", "https://graph.org/file/f75791f8ea5b7239d556d.png"
+        "IMAGE_HELP",
+        "https://graph.org/file/f75791f8ea5b7239d556d.png",
     )
     IMAGE_HTML = environ.get(
-        "IMAGE_HTML", "https://graph.org/file/ea4997ce8dd4500f6d488.png"
+        "IMAGE_HTML",
+        "https://graph.org/file/ea4997ce8dd4500f6d488.png",
     )
     IMAGE_IMDB = environ.get(
-        "IMAGE_IMDB", "https://telegra.ph/file/a8125cb4d68f7d185c760.png"
+        "IMAGE_IMDB",
+        "https://telegra.ph/file/a8125cb4d68f7d185c760.png",
     )
     IMAGE_INFO = environ.get(
-        "IMAGE_INFO", "https://telegra.ph/file/9582c7742e7d12381947c.png"
+        "IMAGE_INFO",
+        "https://telegra.ph/file/9582c7742e7d12381947c.png",
     )
     IMAGE_ITALIC = environ.get(
-        "IMAGE_ITALIC", "https://graph.org/file/c956e4c553717a214903d.png"
+        "IMAGE_ITALIC",
+        "https://graph.org/file/c956e4c553717a214903d.png",
     )
     IMAGE_JD = environ.get(
-        "IMAGE_JD", "https://telegra.ph/file/6d138d70d1d37d84811f8.png"
+        "IMAGE_JD",
+        "https://telegra.ph/file/6d138d70d1d37d84811f8.png",
     )
     IMAGE_LOGS = environ.get(
-        "IMAGE_LOGS", "https://graph.org/file/51cb3c085a5287d909009.png"
+        "IMAGE_LOGS",
+        "https://graph.org/file/51cb3c085a5287d909009.png",
     )
     IMAGE_MDL = environ.get(
-        "IMAGE_MDL", "https://telegra.ph/file/89bdb927fc0f66df6b256.png"
+        "IMAGE_MDL",
+        "https://telegra.ph/file/89bdb927fc0f66df6b256.png",
     )
     IMAGE_MEDINFO = environ.get(
-        "IMAGE_MEDINFO", "https://graph.org/file/62b0667c1ebb0a2f28f82.png"
+        "IMAGE_MEDINFO",
+        "https://graph.org/file/62b0667c1ebb0a2f28f82.png",
     )
     IMAGE_METADATA = environ.get(
-        "IMAGE_METADATA", "https://telegra.ph/file/5159ed1c1cf34b6e8297b.png"
+        "IMAGE_METADATA",
+        "https://telegra.ph/file/5159ed1c1cf34b6e8297b.png",
     )
     IMAGE_MONO = environ.get(
-        "IMAGE_MONO", "https://graph.org/file/b7c1ebd3ff72ef262af4c.png"
+        "IMAGE_MONO",
+        "https://graph.org/file/b7c1ebd3ff72ef262af4c.png",
     )
     IMAGE_NORMAL = environ.get(
-        "IMAGE_NORMAL", "https://graph.org/file/e9786dbca02235e9a6899.png"
+        "IMAGE_NORMAL",
+        "https://graph.org/file/e9786dbca02235e9a6899.png",
     )
     IMAGE_OWNER = environ.get(
-        "IMAGE_OWNER", "https://graph.org/file/7d3c014629529d26f9587.png"
+        "IMAGE_OWNER",
+        "https://graph.org/file/7d3c014629529d26f9587.png",
     )
     IMAGE_PAUSE = environ.get(
-        "IMAGE_PAUSE", "https://graph.org/file/e82080dcbd9ae6b0e62ef.png"
+        "IMAGE_PAUSE",
+        "https://graph.org/file/e82080dcbd9ae6b0e62ef.png",
     )
     IMAGE_PRENAME = environ.get(
-        "IMAGE_PRENAME", "https://graph.org/file/9dbfc87c46c4b5d8834f4.png"
+        "IMAGE_PRENAME",
+        "https://graph.org/file/9dbfc87c46c4b5d8834f4.png",
     )
     IMAGE_QBIT = environ.get(
-        "IMAGE_QBIT", "https://graph.org/file/0ff0d45c17ac52fe38298.png"
+        "IMAGE_QBIT",
+        "https://graph.org/file/0ff0d45c17ac52fe38298.png",
     )
     IMAGE_RCLONE = environ.get(
-        "IMAGE_RCLONE", "https://telegra.ph/file/e6daed8fd63e772a7ca10.png"
+        "IMAGE_RCLONE",
+        "https://telegra.ph/file/e6daed8fd63e772a7ca10.png",
     )
     IMAGE_REMNAME = environ.get(
-        "IMAGE_REMNAME", "https://graph.org/file/9dbfc87c46c4b5d8834f4.png"
+        "IMAGE_REMNAME",
+        "https://graph.org/file/9dbfc87c46c4b5d8834f4.png",
     )
     IMAGE_RSS = environ.get(
-        "IMAGE_RSS", "https://graph.org/file/564aee8a05d3d30bbf53d.png"
+        "IMAGE_RSS",
+        "https://graph.org/file/564aee8a05d3d30bbf53d.png",
     )
     IMAGE_SEARCH = environ.get(
-        "IMAGE_SEARCH", "https://graph.org/file/8a3ae9d84662b5e163e7e.png"
+        "IMAGE_SEARCH",
+        "https://graph.org/file/8a3ae9d84662b5e163e7e.png",
     )
     IMAGE_STATS = environ.get(
-        "IMAGE_STATS", "https://graph.org/file/6026a8b1dfedfe646b39b.png"
+        "IMAGE_STATS",
+        "https://graph.org/file/6026a8b1dfedfe646b39b.png",
     )
     IMAGE_STATUS = environ.get(
-        "IMAGE_STATUS", "https://graph.org/file/75e449cbf201ad364ce39.png"
+        "IMAGE_STATUS",
+        "https://graph.org/file/75e449cbf201ad364ce39.png",
     )
     IMAGE_SUFNAME = environ.get(
-        "IMAGE_SUFNAME", "https://graph.org/file/e1e2a6afdabbce19aa0f0.png"
+        "IMAGE_SUFNAME",
+        "https://graph.org/file/e1e2a6afdabbce19aa0f0.png",
     )
     IMAGE_TMDB = environ.get(
-        "IMAGE_TMDB", "https://telegra.ph/file/ae6fbe49b1ba511defd13.png"
+        "IMAGE_TMDB",
+        "https://telegra.ph/file/ae6fbe49b1ba511defd13.png",
     )
     IMAGE_TXT = environ.get(
-        "IMAGE_TXT", "https://graph.org/file/ec2fbca54b9e41081fade.png"
+        "IMAGE_TXT",
+        "https://graph.org/file/ec2fbca54b9e41081fade.png",
     )
     IMAGE_UNAUTH = environ.get(
-        "IMAGE_UNAUTH", "https://graph.org/file/06bdd8695368b8ee9edec.png"
+        "IMAGE_UNAUTH",
+        "https://graph.org/file/06bdd8695368b8ee9edec.png",
     )
     IMAGE_UNKNOW = environ.get(
-        "IMAGE_UNKNOW", "https://telegra.ph/file/b4af9bed9b588bcd331ab.png"
+        "IMAGE_UNKNOW",
+        "https://telegra.ph/file/b4af9bed9b588bcd331ab.png",
     )
     IMAGE_USER = environ.get(
-        "IMAGE_USER", "https://graph.org/file/989709a50ac468c3a4953.png"
+        "IMAGE_USER",
+        "https://graph.org/file/989709a50ac468c3a4953.png",
     )
     IMAGE_USETIINGS = environ.get(
-        "IMAGE_USETIINGS", "https://graph.org/file/4e358b9a735492726a887.png"
+        "IMAGE_USETIINGS",
+        "https://graph.org/file/4e358b9a735492726a887.png",
     )
     IMAGE_VIDTOOLS = environ.get(
-        "IMAGE_VIDTOOLS", "https://telegra.ph/file/b326080ca2ffc88b414b5.png"
+        "IMAGE_VIDTOOLS",
+        "https://telegra.ph/file/b326080ca2ffc88b414b5.png",
     )
     IMAGE_WEL = environ.get(
-        "IMAGE_WEL", "https://graph.org/file/d053d5ca7fa71913aa575.png"
+        "IMAGE_WEL",
+        "https://graph.org/file/d053d5ca7fa71913aa575.png",
     )
     IMAGE_WIBU = environ.get(
-        "IMAGE_WIBU", "https://graph.org/file/f0247d41171f08fe60288.png"
+        "IMAGE_WIBU",
+        "https://graph.org/file/f0247d41171f08fe60288.png",
     )
     IMAGE_YT = environ.get(
-        "IMAGE_YT", "https://graph.org/file/3755f52bc43d7e0ce061b.png"
+        "IMAGE_YT",
+        "https://graph.org/file/3755f52bc43d7e0ce061b.png",
     )
     IMAGE_ZIP = environ.get(
-        "IMAGE_ZIP", "https://telegra.ph/file/4a1a17589798bc405b9c9.png"
+        "IMAGE_ZIP",
+        "https://telegra.ph/file/4a1a17589798bc405b9c9.png",
     )
     # ======================================================================
 
@@ -588,7 +645,7 @@ async def load_config():
     await (await create_subprocess_exec("pkill", "-9", "-f", "gunicorn")).wait()
     if BASE_URL and BASE_URL != STREAM_BASE_URL:
         await create_subprocess_shell(
-            f"gunicorn web.wserver:app --bind 0.0.0.0:{PORT} --worker-class gevent"
+            f"gunicorn web.wserver:app --bind 0.0.0.0:{PORT} --worker-class gevent",
         )
 
     WEB_PINCODE = environ.get("WEB_PINCODE", "False").lower() == "true"
@@ -849,7 +906,7 @@ async def load_config():
             # HEROKU
             "HEROKU_API_KEY": HEROKU_API_KEY,
             "HEROKU_APP_NAME": HEROKU_APP_NAME,
-        }
+        },
     )
     LOGGER.info("Config loaded!")
     if DATABASE_URL:
@@ -874,12 +931,17 @@ async def intialize_userbot(check=True):
                 await userbot.stop()
                 LOGGER.info("Userbot stopped.")
         bot_dict.update(
-            {"IS_PREMIUM": False, "USERBOT": None, "MAX_SPLIT_SIZE": DEFAULT_SPLIT_SIZE}
+            {
+                "IS_PREMIUM": False,
+                "USERBOT": None,
+                "MAX_SPLIT_SIZE": DEFAULT_SPLIT_SIZE,
+            },
         )
         if USER_SESSION_STRING := config_dict["USER_SESSION_STRING"]:
             try:
                 await gather(
-                    clean_target("user.session"), clean_target("user.session-journal")
+                    clean_target("user.session"),
+                    clean_target("user.session-journal"),
                 )
                 userbot = await Client(
                     "user",
@@ -899,7 +961,7 @@ async def intialize_userbot(check=True):
                 else:
                     await userbot.stop()
                     LOGGER.info(
-                        "Not detected premium from session string, using default client!"
+                        "Not detected premium from session string, using default client!",
                     )
             except Exception as e:
                 LOGGER.error(e)
@@ -927,7 +989,8 @@ async def intialize_savebot(session_string=None, check=True, user_id=None):
             return
         if (
             user_id
-            and session_string == user_data.get(user_id, {}).get("session_string", "")
+            and session_string
+            == user_data.get(user_id, {}).get("session_string", "")
             and (savebot := bot_dict.get(user_id, {}).get("SAVEBOT"))
         ):
             bot_dict.setdefault(user_id, {})

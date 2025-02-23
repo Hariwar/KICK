@@ -1,34 +1,34 @@
-from aiofiles import open as aiopen
-from aiohttp import ClientSession
-from apscheduler.triggers.interval import IntervalTrigger
-from asyncio import Lock, sleep, gather
+from asyncio import Lock, gather, sleep
 from datetime import datetime, timedelta
-from feedparser import parse as feedparse
 from functools import partial
-from pyrogram import Client
-from pyrogram.filters import command, regex, create
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Message, CallbackQuery
 from re import split as re_split
 from time import time
 
-from bot import bot, scheduler, rss_dict, config_dict, LOGGER, DATABASE_URL
-from bot.helper.ext_utils.bot_utils import new_thread, new_task
-from bot.helper.ext_utils.help_messages import HelpString
+from aiofiles import open as aiopen
+from aiohttp import ClientSession
+from apscheduler.triggers.interval import IntervalTrigger
+from feedparser import parse as feedparse
+from pyrogram import Client
+from pyrogram.filters import command, create, regex
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+from pyrogram.types import CallbackQuery, Message
+
+from bot import DATABASE_URL, LOGGER, bot, config_dict, rss_dict, scheduler
+from bot.helper.ext_utils.bot_utils import new_task, new_thread
 from bot.helper.ext_utils.db_handler import DbManager
 from bot.helper.ext_utils.exceptions import RssShutdownException
+from bot.helper.ext_utils.help_messages import HelpString
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
+    auto_delete_message,
     deleteMessage,
     editMessage,
-    sendMessage,
     sendCustom,
-    auto_delete_message,
     sendFile,
+    sendMessage,
 )
-
 
 rss_dict_lock = Lock()
 handler_dict = {}
@@ -94,25 +94,35 @@ async def rssSub(client: Client, message: Message, query: CallbackQuery):
         title = args[0].strip()
         if (user_feeds := rss_dict.get(user_id, False)) and title in user_feeds:
             errmsg = await sendMessage(
-                f"This title {title} already subscribed! Choose another title!", message
+                f"This title {title} already subscribed! Choose another title!",
+                message,
             )
             _auto_delete(message, errmsg)
             continue
         feed_link = args[1].strip()
         if feed_link.startswith(("-inf", "-exf", "-c")):
             errmsg = await sendMessage(
-                f"Wrong input in line {index}! Add Title! Read the example!", message
+                f"Wrong input in line {index}! Add Title! Read the example!",
+                message,
             )
             _auto_delete(message, errmsg)
             continue
         inf_lists, exf_lists = [], []
         if len(args) > 2:
             arg = item.split(" -c ", 1)
-            cmd = re_split(" -inf | -exf ", arg[1])[0].strip() if len(arg) > 1 else None
+            cmd = (
+                re_split(" -inf | -exf ", arg[1])[0].strip()
+                if len(arg) > 1
+                else None
+            )
             arg = item.split(" -inf ", 1)
-            inf = re_split(" -c | -exf ", arg[1])[0].strip() if len(arg) > 1 else None
+            inf = (
+                re_split(" -c | -exf ", arg[1])[0].strip() if len(arg) > 1 else None
+            )
             arg = item.split(" -exf ", 1)
-            exf = re_split(" -c | -inf ", arg[1])[0].strip() if len(arg) > 1 else None
+            exf = (
+                re_split(" -c | -inf ", arg[1])[0].strip() if len(arg) > 1 else None
+            )
             if inf is not None:
                 filters_list = inf.split("|")
                 for x in filters_list:
@@ -197,7 +207,9 @@ async def getUserId(title):
         )
 
 
-async def rssUpdate(client: Client, message: Message, query: CallbackQuery, state: str):
+async def rssUpdate(
+    client: Client, message: Message, query: CallbackQuery, state: str
+):
     user_id = message.from_user.id
     handler_dict[user_id] = False
     titles = message.text.split()
@@ -214,7 +226,7 @@ async def rssUpdate(client: Client, message: Message, query: CallbackQuery, stat
                 _auto_delete(message, errmsg)
                 continue
         istate = rss_dict[user_id][title].get("paused", False)
-        if istate and state == "pause" or not istate and state == "resume":
+        if (istate and state == "pause") or (not istate and state == "resume"):
             errmsg = await sendMessage(f"{title} already {state}d!", message)
             _auto_delete(message, errmsg)
             continue
@@ -263,7 +275,7 @@ async def rssList(query: CallbackQuery, start: int, all_users: bool = False):
             index = 0
             for titles in list(rss_dict.values()):
                 for index, (title, data) in enumerate(
-                    list(titles.items())[start : 5 + start]
+                    list(titles.items())[start : 5 + start],
                 ):
                     list_feed += (
                         f"\n\n<b>Title:</b> <code>{title}</code>\n"
@@ -294,7 +306,9 @@ async def rssList(query: CallbackQuery, start: int, all_users: bool = False):
     if keysCount > 5:
         for x in range(0, keysCount, 5):
             buttons.button_data(
-                f"{int(x / 5) + 1}", f"rss list {user_id} {x}", "footer"
+                f"{int(x / 5) + 1}",
+                f"rss list {user_id} {x}",
+                "footer",
             )
     if query.message.text.html == list_feed:
         return
@@ -319,7 +333,8 @@ async def rssGet(_, message: Message, query: CallbackQuery):
         data = rss_dict[user_id].get(title, False)
         if data and count > 0:
             msg = await sendMessage(
-                f"Getting the last <b>{count}</b> item(s) from {title}", message
+                f"Getting the last <b>{count}</b> item(s) from {title}",
+                message,
             )
             try:
                 async with (
@@ -345,7 +360,9 @@ async def rssGet(_, message: Message, query: CallbackQuery):
                         await f.write(f"{item_info_ecd}")
                     await gather(
                         sendFile(
-                            message, filename, f"RSSGet {title} items_no. {count}"
+                            message,
+                            filename,
+                            f"RSSGet {title} items_no. {count}",
                         ),
                         deleteMessage(msg),
                     )
@@ -354,7 +371,8 @@ async def rssGet(_, message: Message, query: CallbackQuery):
             except IndexError as e:
                 LOGGER.error(e)
                 await editMessage(
-                    "Parse depth exceeded. Try again with a lower value.", msg
+                    "Parse depth exceeded. Try again with a lower value.",
+                    msg,
                 )
             except Exception as e:
                 LOGGER.error(e)
@@ -436,10 +454,14 @@ async def event_handler(client: Client, query: CallbackQuery, pfunc: partial):
     async def event_filter(_, __, event):
         user = event.from_user or event.sender_chat
         return bool(
-            user.id == user_id and event.chat.id == query.message.chat.id and event.text
+            user.id == user_id
+            and event.chat.id == query.message.chat.id
+            and event.text,
         )
 
-    handler = client.add_handler(MessageHandler(pfunc, create(event_filter)), group=-1)
+    handler = client.add_handler(
+        MessageHandler(pfunc, create(event_filter)), group=-1
+    )
     while handler_dict[user_id]:
         await sleep(0.5)
         if time() - start_time > 60:
@@ -460,7 +482,8 @@ async def rssListener(client: Client, query: CallbackQuery):
         case "close":
             handler_dict[user_id] = False
             await gather(
-                query.answer(), deleteMessage(message, message.reply_to_message)
+                query.answer(),
+                deleteMessage(message, message.reply_to_message),
             )
         case "back":
             handler_dict[user_id] = False
@@ -473,7 +496,9 @@ async def rssListener(client: Client, query: CallbackQuery):
             pfunc = partial(rssSub, query=query)
             await gather(
                 query.answer().editMessage(
-                    HelpString.RSSHELP, message, buttons.build_menu(2)
+                    HelpString.RSSHELP,
+                    message,
+                    buttons.build_menu(2),
                 ),
                 event_handler(client, query, pfunc),
             )
@@ -511,15 +536,18 @@ async def rssListener(client: Client, query: CallbackQuery):
                 match value:
                     case "pause":
                         buttons.button_data(
-                            "Pause AllMyFeeds", f"rss uallpause {user_id}"
+                            "Pause AllMyFeeds",
+                            f"rss uallpause {user_id}",
                         )
                     case "resume":
                         buttons.button_data(
-                            "Resume AllMyFeeds", f"rss uallresume {user_id}"
+                            "Resume AllMyFeeds",
+                            f"rss uallresume {user_id}",
                         )
                     case "unsubscribe":
                         buttons.button_data(
-                            "Unsub AllMyFeeds", f"rss uallunsub {user_id}"
+                            "Unsub AllMyFeeds",
+                            f"rss uallunsub {user_id}",
                         )
                 buttons.button_data("Close", f"rss close {user_id}")
                 pfunc = partial(rssUpdate, query=query, state=value)
@@ -682,7 +710,10 @@ async def rssMonitor():
                 finally:
                     all_paused = False
                 last_title = rss_d.entries[0]["title"]
-                if data["last_feed"] == last_link or data["last_title"] == last_title:
+                if (
+                    data["last_feed"] == last_link
+                    or data["last_title"] == last_title
+                ):
                     continue
                 feed_count = 0
                 while True:
@@ -696,7 +727,10 @@ async def rssMonitor():
                             url = rss_d.entries[feed_count]["links"][1]["href"]
                         except IndexError:
                             url = rss_d.entries[feed_count]["link"]
-                        if data["last_feed"] == url or data["last_title"] == item_title:
+                        if (
+                            data["last_feed"] == url
+                            or data["last_title"] == item_title
+                        ):
                             break
                     except IndexError:
                         LOGGER.warning(
@@ -736,7 +770,7 @@ async def rssMonitor():
                     if user not in rss_dict or not rss_dict[user].get(title, False):
                         continue
                     rss_dict[user][title].update(
-                        {"last_feed": last_link, "last_title": last_title}
+                        {"last_feed": last_link, "last_title": last_title},
                     )
                 await DbManager().rss_update(user)
                 LOGGER.info("Feed Name: %s", title)
@@ -746,7 +780,10 @@ async def rssMonitor():
                 break
             except Exception as e:
                 LOGGER.error(
-                    "%s - Feed Name: %s - Feed Link: %s", e, title, data["link"]
+                    "%s - Feed Name: %s - Feed Link: %s",
+                    e,
+                    title,
+                    data["link"],
                 )
                 continue
     if all_paused:
@@ -770,7 +807,8 @@ addJob()
 scheduler.start()
 bot.add_handler(
     MessageHandler(
-        getRssMenu, filters=command(BotCommands.RssCommand) & CustomFilters.authorized
-    )
+        getRssMenu,
+        filters=command(BotCommands.RssCommand) & CustomFilters.authorized,
+    ),
 )
 bot.add_handler(CallbackQueryHandler(rssListener, filters=regex("^rss")))

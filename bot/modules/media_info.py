@@ -1,9 +1,10 @@
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
+
 from bot import bot, config_dict
 from bot.helper.ext_utils.bot_utils import new_task
-from bot.helper.ext_utils.links_utils import is_url, get_url_name, get_link, is_media
+from bot.helper.ext_utils.links_utils import get_link, get_url_name, is_media, is_url
 from bot.helper.ext_utils.media_utils import post_media_info
 from bot.helper.ext_utils.status_utils import get_readable_file_size
 from bot.helper.stream_utils.file_properties import gen_link
@@ -11,11 +12,11 @@ from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    sendPhoto,
-    editPhoto,
     copyMessage,
     deleteMessage,
+    editPhoto,
+    sendMessage,
+    sendPhoto,
 )
 from bot.helper.video_utils.executor import get_metavideo
 
@@ -50,7 +51,8 @@ async def medinfo(_, message: Message):
             await editPhoto("Error when getting info!", msg, img)
     else:
         await sendMessage(
-            "Send command along with link or by reply to the link/media!", message
+            "Send command along with link or by reply to the link/media!",
+            message,
         )
     if cmsg:
         await deleteMessage(cmsg)
@@ -58,6 +60,7 @@ async def medinfo(_, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        medinfo, command(BotCommands.MediaInfoCommand) & CustomFilters.authorized
-    )
+        medinfo,
+        command(BotCommands.MediaInfoCommand) & CustomFilters.authorized,
+    ),
 )

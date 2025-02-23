@@ -1,14 +1,16 @@
-from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaIoBaseDownload
 from io import FileIO
 from logging import getLogger
-from os import makedirs, path as ospath
+from os import makedirs
+from os import path as ospath
+
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseDownload
 from tenacity import (
-    retry,
-    wait_exponential,
-    stop_after_attempt,
-    retry_if_exception_type,
     RetryError,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
 )
 
 from bot.helper.ext_utils.bot_utils import async_to_sync, setInterval
@@ -32,7 +34,7 @@ class gdDownload(GoogleDriveHelper):
         except Exception as e:
             LOGGER.error(e)
             async_to_sync(self.listener.onDownloadError, str(e))
-            return
+            return None
         self._updater = setInterval(self.update_interval, self.progress)
         try:
             meta = self.getFileMetadata(file_id)
@@ -41,7 +43,10 @@ class gdDownload(GoogleDriveHelper):
             else:
                 makedirs(self._path, exist_ok=True)
                 self._download_file(
-                    file_id, self._path, self.listener.name, meta.get("mimeType")
+                    file_id,
+                    self._path,
+                    self.listener.name,
+                    meta.get("mimeType"),
                 )
         except Exception as err:
             if isinstance(err, RetryError):
@@ -63,7 +68,7 @@ class gdDownload(GoogleDriveHelper):
         finally:
             self._updater.cancel()
             if self.is_cancelled:
-                return
+                return None
             async_to_sync(self.listener.onDownloadComplete)
 
     def _download_folder(self, folder_id, path, folder_name):
@@ -87,8 +92,10 @@ class gdDownload(GoogleDriveHelper):
             if mime_type == self.G_DRIVE_DIR_MIME_TYPE:
                 self._download_folder(file_id, path, filename)
             elif not ospath.isfile(
-                f"{path}{filename}"
-            ) and not filename.lower().endswith(tuple(self.listener.extensionFilter)):
+                f"{path}{filename}",
+            ) and not filename.lower().endswith(
+                tuple(self.listener.extensionFilter)
+            ):
                 self._download_file(file_id, path, filename, mime_type)
             if self.is_cancelled:
                 break
@@ -99,7 +106,9 @@ class gdDownload(GoogleDriveHelper):
         retry=(retry_if_exception_type(Exception)),
     )
     def _download_file(self, file_id, path, filename, mime_type):
-        request = self.service.files().get_media(fileId=file_id, supportsAllDrives=True)
+        request = self.service.files().get_media(
+            fileId=file_id, supportsAllDrives=True
+        )
         filename = filename.replace("/", "")
         if len(filename.encode()) > 255:
             ext = ospath.splitext(filename)[1]
@@ -107,7 +116,7 @@ class gdDownload(GoogleDriveHelper):
             if self.listener.name.endswith(ext):
                 self.listener.name = filename
         if self.is_cancelled:
-            return
+            return None
         fh = FileIO(f"{path}/{filename}", "wb")
         downloader = MediaIoBaseDownload(fh, request, chunksize=100 * 1024 * 1024)
         done = False
@@ -137,13 +146,16 @@ class gdDownload(GoogleDriveHelper):
                             raise err
 
                         if self.is_cancelled:
-                            return
+                            return None
 
                         self.switchServiceAccount()
                         LOGGER.info("Got: %s, Trying Again...", reason)
-                        return self._download_file(file_id, path, filename, mime_type)
+                        return self._download_file(
+                            file_id, path, filename, mime_type
+                        )
 
                     LOGGER.error("Got: %s", reason)
                     raise err
 
         self.file_processed_bytes = 0
+        return None

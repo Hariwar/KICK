@@ -1,13 +1,13 @@
-from pyrogram.errors import UserAlreadyParticipant, InviteHashExpired
+from pyrogram.errors import InviteHashExpired, UserAlreadyParticipant
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
 
-from bot import bot, bot_dict, bot_lock, LOGGER
+from bot import LOGGER, bot, bot_dict, bot_lock
+from bot.helper.ext_utils.links_utils import get_link
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
-from bot.helper.ext_utils.links_utils import get_link
-from bot.helper.telegram_helper.message_utils import sendMessage, auto_delete_message
+from bot.helper.telegram_helper.message_utils import auto_delete_message, sendMessage
 
 
 async def join_chat(_, message: Message):
@@ -41,5 +41,5 @@ bot.add_handler(
     MessageHandler(
         join_chat,
         filters=command(BotCommands.JoinChatCommand) & CustomFilters.authorized,
-    )
+    ),
 )

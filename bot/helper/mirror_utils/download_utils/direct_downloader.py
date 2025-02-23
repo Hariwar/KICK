@@ -1,29 +1,33 @@
 from __future__ import annotations
+
 from os import path as ospath
 from secrets import token_urlsafe
+from typing import TYPE_CHECKING
 
 from bot import (
     LOGGER,
     aria2_options,
     aria2c_global,
-    task_dict,
-    task_dict_lock,
     non_queued_dl,
     queue_dict_lock,
+    task_dict,
+    task_dict_lock,
 )
 from bot.helper.ext_utils.bot_utils import sync_to_async
 from bot.helper.ext_utils.links_utils import get_link
 from bot.helper.ext_utils.status_utils import get_readable_file_size
 from bot.helper.ext_utils.task_manager import (
+    check_limits_size,
     check_running_tasks,
     stop_duplicate_check,
-    check_limits_size,
 )
-from bot.helper.listeners import tasks_listener as task
 from bot.helper.listeners.direct_listener import DirectListener
 from bot.helper.mirror_utils.status_utils.direct_status import DirectStatus
 from bot.helper.mirror_utils.status_utils.queue_status import QueueStatus
 from bot.helper.telegram_helper.message_utils import sendStatusMessage
+
+if TYPE_CHECKING:
+    from bot.helper.listeners import tasks_listener as task
 
 
 async def add_direct_download(listener: task.TaskListener, path: str):
@@ -48,7 +52,7 @@ async def add_direct_download(listener: task.TaskListener, path: str):
     if msg := await check_limits_size(listener, size):
         LOGGER.info("File/folder size over the limit size!")
         await listener.onDownloadError(
-            f"{msg}. File/folder size is {get_readable_file_size(size)}."
+            f"{msg}. File/folder size is {get_readable_file_size(size)}.",
         )
         return
 

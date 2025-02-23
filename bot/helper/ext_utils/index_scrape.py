@@ -1,10 +1,10 @@
-from aiohttp import ClientSession
 from base64 import b64decode, b64encode
 from json import loads as jsonloads
 from urllib.parse import quote
 
-from bot import LOGGER
+from aiohttp import ClientSession
 
+from bot import LOGGER
 
 next_page = False
 next_page_token = ""
@@ -16,7 +16,9 @@ async def func(payload_input, url: str, username: str, password: str):
         url += "/"
     try:
         user_pass = f"{username}:{password}"
-        headers = {"authorization": f"Basic {b64encode(user_pass.encode()).decode()}"}
+        headers = {
+            "authorization": f"Basic {b64encode(user_pass.encode()).decode()}"
+        }
     except:
         return "Username/password combination is wrong or invalid link!"
     try:
@@ -41,7 +43,7 @@ async def func(payload_input, url: str, username: str, password: str):
         next_page_token = page_token
     result = []
     try:
-        if list(decrypted_response.get("data").keys())[0] == "error":
+        if next(iter(decrypted_response.get("data").keys())) == "error":
             raise ValueError("Gor error respons!")
         file_length = len(decrypted_response["data"]["files"])
         for i, _ in enumerate(range(file_length)):

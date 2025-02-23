@@ -1,12 +1,12 @@
-from time import time
 from os import path as ospath
+from time import time
 
-from bot import subprocess_lock, LOGGER
+from bot import LOGGER, subprocess_lock
 from bot.helper.ext_utils.bot_utils import async_to_sync
 from bot.helper.ext_utils.files_utils import get_path_size
 from bot.helper.ext_utils.status_utils import (
-    get_readable_file_size,
     MirrorStatus,
+    get_readable_file_size,
     get_readable_time,
 )
 
@@ -52,7 +52,7 @@ class ZipStatus:
         ):
             self._iszpath = True
             zsize = get_readable_file_size(
-                async_to_sync(get_path_size, self.listener.dir)
+                async_to_sync(get_path_size, self.listener.dir),
             )
             return f"{self.listener.name} ({zsize}) ~ {zname}.zip"
         return self.listener.name
@@ -63,7 +63,7 @@ class ZipStatus:
     def eta(self):
         try:
             return get_readable_time(
-                (self._size - self.processed_raw()) / self.speed_raw()
+                (self._size - self.processed_raw()) / self.speed_raw(),
             )
         except:
             return "~"

@@ -1,30 +1,31 @@
-from pyrogram.filters import command
-from pyrogram.handlers import MessageHandler
-from pyrogram.types import Message
 from random import choice
 from time import time
 
+from pyrogram.filters import command
+from pyrogram.handlers import MessageHandler
+from pyrogram.types import Message
+
 from bot import bot, config_dict, user_data
-from bot.helper.ext_utils.bot_utils import sync_to_async, new_task
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
 from bot.helper.ext_utils.commons_check import UseCheck
-from bot.helper.ext_utils.links_utils import is_gdrive_link, get_link, is_media
+from bot.helper.ext_utils.links_utils import get_link, is_gdrive_link, is_media
 from bot.helper.ext_utils.status_utils import (
-    get_readable_file_size,
-    get_date_time,
-    get_readable_time,
     action,
+    get_date_time,
+    get_readable_file_size,
+    get_readable_time,
 )
 from bot.helper.mirror_utils.gdrive_utlis.count import gdCount
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    deleteMessage,
-    sendMessage,
-    sendingMessage,
-    sendSticker,
     auto_delete_message,
     copyMessage,
+    deleteMessage,
+    sendingMessage,
+    sendMessage,
+    sendSticker,
 )
 
 
@@ -46,12 +47,18 @@ async def countNode(_, message: Message):
     ):
         tag = reply_to.from_user.mention
 
-    if (link := get_link(message)) and is_gdrive_link(link) and not is_media(reply_to):
+    if (
+        (link := get_link(message))
+        and is_gdrive_link(link)
+        and not is_media(reply_to)
+    ):
         TIME_ZONE_TITLE = config_dict["TIME_ZONE_TITLE"]
         dt_date, dt_time = get_date_time(message)
         msg = await sendMessage(f"<i>Counting:</i> <code>{link}</code>", message)
         name, mime_type, size, files, folders = await sync_to_async(
-            gdCount().count, link, user_id
+            gdCount().count,
+            link,
+            user_id,
         )
         await deleteMessage(msg)
         if "not found" in name or not mime_type:
@@ -103,6 +110,7 @@ async def countNode(_, message: Message):
 
 bot.add_handler(
     MessageHandler(
-        countNode, filters=command(BotCommands.CountCommand) & CustomFilters.authorized
-    )
+        countNode,
+        filters=command(BotCommands.CountCommand) & CustomFilters.authorized,
+    ),
 )

@@ -1,7 +1,7 @@
 from asyncio import gather
 from time import time
 
-from bot import aria2, LOGGER
+from bot import LOGGER, aria2
 from bot.helper.ext_utils.bot_utils import sync_to_async
 from bot.helper.ext_utils.status_utils import MirrorStatus, get_readable_time
 
@@ -104,9 +104,11 @@ class Aria2Status:
             LOGGER.info("Cancelling Seed: %s", self.name())
             await gather(
                 self.listener.onUploadError(
-                    f"Seeding stopped with Ratio: {self.ratio()} and Time: {self.seeding_time()}"
+                    f"Seeding stopped with Ratio: {self.ratio()} and Time: {self.seeding_time()}",
                 ),
-                sync_to_async(aria2.remove, [self._download], force=True, files=True),
+                sync_to_async(
+                    aria2.remove, [self._download], force=True, files=True
+                ),
             )
         elif downloads := self._download.followed_by:
             LOGGER.info("Cancelling Download: %s")
@@ -122,5 +124,7 @@ class Aria2Status:
                 msg = "Download stopped by user!"
             await gather(
                 self.listener.onDownloadError(msg),
-                sync_to_async(aria2.remove, [self._download], force=True, files=True),
+                sync_to_async(
+                    aria2.remove, [self._download], force=True, files=True
+                ),
             )

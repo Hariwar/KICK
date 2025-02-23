@@ -1,25 +1,30 @@
+from random import choice
+from time import time
+
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
-from random import choice
-from time import time
 from waybackpy import Url as wayurl
 
-from bot import bot, config_dict, user_data, LOGGER
-from bot.helper.ext_utils.bot_utils import sync_to_async, new_task
+from bot import LOGGER, bot, config_dict, user_data
+from bot.helper.ext_utils.bot_utils import new_task, sync_to_async
 from bot.helper.ext_utils.commons_check import UseCheck
-from bot.helper.ext_utils.links_utils import is_url, get_link
-from bot.helper.ext_utils.status_utils import get_readable_time, action, get_date_time
+from bot.helper.ext_utils.links_utils import get_link, is_url
+from bot.helper.ext_utils.status_utils import (
+    action,
+    get_date_time,
+    get_readable_time,
+)
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    editMessage,
-    sendMessage,
     auto_delete_message,
     copyMessage,
-    sendingMessage,
     deleteMessage,
+    editMessage,
+    sendingMessage,
+    sendMessage,
 )
 
 
@@ -72,7 +77,9 @@ async def wayback(_, message: Message):
     if user_data.get(user_id, {}).get("enable_pm") and isSuperGroup:
         await copyMessage(user_id, way_msg)
 
-    if isSuperGroup and (stime := config_dict["AUTO_DELETE_UPLOAD_MESSAGE_DURATION"]):
+    if isSuperGroup and (
+        stime := config_dict["AUTO_DELETE_UPLOAD_MESSAGE_DURATION"]
+    ):
         await auto_delete_message(message, message.reply_to_message, stime=stime)
 
 
@@ -93,6 +100,7 @@ def saveWebPage(pageurl: str):
 
 bot.add_handler(
     MessageHandler(
-        wayback, filters=command(BotCommands.WayBackCommand) & CustomFilters.authorized
-    )
+        wayback,
+        filters=command(BotCommands.WayBackCommand) & CustomFilters.authorized,
+    ),
 )

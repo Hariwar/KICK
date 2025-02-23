@@ -1,27 +1,31 @@
-from asyncio import sleep, gather
-from pyrogram import Client
-from pyrogram.enums import ChatMemberStatus
-from pyrogram.filters import command, regex
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
-from pyrogram.types import Message, CallbackQuery
+from asyncio import gather, sleep
 from random import choice
 from time import time
 
-from bot import bot, bot_name, bot_dict, bot_lock, config_dict, user_data
+from pyrogram import Client
+from pyrogram.enums import ChatMemberStatus
+from pyrogram.filters import command, regex
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
+from pyrogram.types import CallbackQuery, Message
+
+from bot import bot, bot_dict, bot_lock, bot_name, config_dict, user_data
 from bot.helper.ext_utils.bot_utils import new_task
 from bot.helper.ext_utils.commons_check import UseCheck
 from bot.helper.ext_utils.conf_loads import intialize_savebot
-from bot.helper.ext_utils.status_utils import get_readable_time, get_progress_bar_string
+from bot.helper.ext_utils.status_utils import (
+    get_progress_bar_string,
+    get_readable_time,
+)
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.button_build import ButtonMaker
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    sendMessage,
-    editMessage,
-    deleteMessage,
-    sendingMessage,
-    handle_message,
     auto_delete_message,
+    deleteMessage,
+    editMessage,
+    handle_message,
+    sendingMessage,
+    sendMessage,
 )
 
 hanlder_dict = {}
@@ -43,20 +47,24 @@ async def backup_message(client: Client, message: Message):
         _, start, end, source_id, des_id = message.text.split()
     except:
         await sendMessage(
-            "Send valid format: start, end, source id, destination id!", message
+            "Send valid format: start, end, source id, destination id!",
+            message,
         )
         return
 
-    if bool(list(filter(lambda x: x.ID == int(des_id), hanlder_dict.values()))):
+    if bool(list(filter(lambda x: int(des_id) == x.ID, hanlder_dict.values()))):
         await sendMessage(
-            "Only allowed one backup at once to same destination!", message
+            "Only allowed one backup at once to same destination!",
+            message,
         )
         return
 
     user_id = message.from_user.id
     Bot, is_session = client, False
     await intialize_savebot(
-        user_data.get(user_id, {}).get("session_string", ""), True, user_id
+        user_data.get(user_id, {}).get("session_string", ""),
+        True,
+        user_id,
     )
     async with bot_lock:
         ubot = bot_dict[user_id]["SAVEBOT"]
@@ -69,7 +77,8 @@ async def backup_message(client: Client, message: Message):
         stitle = chat.title
         if chat.has_protected_content:
             await sendMessage(
-                "Upps, u can't copy diretcly for restricted content!", message
+                "Upps, u can't copy diretcly for restricted content!",
+                message,
             )
             return
     except:
@@ -85,7 +94,8 @@ async def backup_message(client: Client, message: Message):
         user = await client.get_chat_member(int(des_id), bot_name)
         if user.status != ChatMemberStatus.ADMINISTRATOR:
             await sendMessage(
-                "Ups, requires chat admin privileges to copy message(s)!", message
+                "Ups, requires chat admin privileges to copy message(s)!",
+                message,
             )
             return
     except:
@@ -103,7 +113,9 @@ async def backup_message(client: Client, message: Message):
     backup.ID = int(des_id)
     hanlder_dict[message.id] = backup
     cmsg = await sendMessage(
-        "Starting copy message(s)...", message, buttons.build_menu(3)
+        "Starting copy message(s)...",
+        message,
+        buttons.build_menu(3),
     )
     await sleep(2)
     succ = fail = empy = 0
@@ -114,7 +126,10 @@ async def backup_message(client: Client, message: Message):
     @handle_message
     async def _copy(chat_id: int, message: Message):
         return await Bot.copy_message(
-            chat_id, message.chat.id, message.id, disable_notification=True
+            chat_id,
+            message.chat.id,
+            message.id,
+            disable_notification=True,
         )
 
     @handle_message
@@ -131,7 +146,11 @@ async def backup_message(client: Client, message: Message):
         if msg.empty:
             empy += 1
             continue
-        if (typee := backup.TYPE) and typee != "all" and not getattr(msg, typee, None):
+        if (
+            (typee := backup.TYPE)
+            and typee != "all"
+            and not getattr(msg, typee, None)
+        ):
             continue
         if time() - count_time > 10:
             progress = f"{round(x / total_msg * 100, 2)}%"
@@ -202,6 +221,8 @@ bot.add_handler(
     MessageHandler(
         backup_message,
         filters=command(BotCommands.BackupCommand) & CustomFilters.authorized,
-    )
+    ),
 )
-bot.add_handler(CallbackQueryHandler(backup_message_hanlder, filters=regex("^backup")))
+bot.add_handler(
+    CallbackQueryHandler(backup_message_hanlder, filters=regex("^backup"))
+)

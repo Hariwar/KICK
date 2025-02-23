@@ -57,7 +57,7 @@ class YtDlpDownloadStatus:
             return get_readable_time(self._obj.eta)
         try:
             return get_readable_time(
-                (self._obj.size - self.processed_raw()) / self._obj.download_speed
+                (self._obj.size - self.processed_raw()) / self._obj.download_speed,
             )
         except:
             return "~"

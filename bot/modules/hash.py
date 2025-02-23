@@ -1,32 +1,33 @@
-from aiofiles.os import makedirs
 from asyncio import gather
-from hashlib import md5, sha1, sha224, sha256, sha512, sha384
+from hashlib import md5, sha1, sha224, sha256, sha384, sha512
 from os import path as ospath
+from time import time
+
+from aiofiles.os import makedirs
 from pyrogram.filters import command
 from pyrogram.handlers import MessageHandler
 from pyrogram.types import Message
-from time import time
 
-from bot import bot, config_dict, user_data, LOGGER
+from bot import LOGGER, bot, config_dict, user_data
 from bot.helper.ext_utils.bot_utils import new_task
 from bot.helper.ext_utils.commons_check import UseCheck
 from bot.helper.ext_utils.files_utils import clean_target
 from bot.helper.ext_utils.links_utils import is_media
 from bot.helper.ext_utils.status_utils import (
-    get_readable_time,
-    get_readable_file_size,
     action,
     get_date_time,
+    get_readable_file_size,
+    get_readable_time,
 )
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
-    editMessage,
-    sendMessage,
-    sendMedia,
     auto_delete_message,
     copyMessage,
     deleteMessage,
+    editMessage,
+    sendMedia,
+    sendMessage,
 )
 
 
@@ -42,7 +43,7 @@ async def hasher(_, message: Message):
         await auto_delete_message(message, fmsg, reply_to)
         return
 
-    if not reply_to or reply_to and not (media := is_media(reply_to)):
+    if not reply_to or (reply_to and not (media := is_media(reply_to))):
         msg = await sendMessage(f"{tag}, replying to media or file!", message)
         await auto_delete_message(message, msg)
         return
@@ -53,7 +54,8 @@ async def hasher(_, message: Message):
     try:
         fname, fsize = media.file_name, media.file_size
         outpath = await bot.download_media(
-            message=media, file_name=ospath.join(VtPath, media.file_name)
+            message=media,
+            file_name=ospath.join(VtPath, media.file_name),
         )
     except Exception as e:
         LOGGER.error(e)
@@ -82,7 +84,8 @@ async def hasher(_, message: Message):
     except Exception as e:
         LOGGER.info(e)
         await gather(
-            clean_target("hash"), editMessage("Hashing error. Check Logs.", hmsg)
+            clean_target("hash"),
+            editMessage("Hashing error. Check Logs.", hmsg),
         )
         return
     msg = (
@@ -112,12 +115,15 @@ async def hasher(_, message: Message):
     if user_data.get(user_id, {}).get("enable_pm") and isSuperGroup:
         await copyMessage(user_id, hash_msg)
 
-    if isSuperGroup and (stime := config_dict["AUTO_DELETE_UPLOAD_MESSAGE_DURATION"]):
+    if isSuperGroup and (
+        stime := config_dict["AUTO_DELETE_UPLOAD_MESSAGE_DURATION"]
+    ):
         await auto_delete_message(message, reply_to, stime=stime)
 
 
 bot.add_handler(
     MessageHandler(
-        hasher, filters=command(BotCommands.HashCommand) & CustomFilters.authorized
-    )
+        hasher,
+        filters=command(BotCommands.HashCommand) & CustomFilters.authorized,
+    ),
 )

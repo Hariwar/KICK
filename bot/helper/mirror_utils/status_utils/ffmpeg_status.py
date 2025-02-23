@@ -4,8 +4,8 @@ from bot import LOGGER, VID_MODE
 from bot.helper.ext_utils.bot_utils import async_to_sync
 from bot.helper.ext_utils.files_utils import get_path_size
 from bot.helper.ext_utils.status_utils import (
-    get_readable_file_size,
     MirrorStatus,
+    get_readable_file_size,
     get_readable_time,
 )
 
@@ -62,7 +62,7 @@ class FFMpegStatus:
             return get_readable_time(self._obj.eta)
         try:
             return get_readable_time(
-                (self._obj.size - self._obj.processed_bytes) / self._obj.speed
+                (self._obj.size - self._obj.processed_bytes) / self._obj.speed,
             )
         except:
             return "~"

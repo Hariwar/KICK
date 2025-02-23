@@ -1,27 +1,34 @@
-from aiofiles.os import remove, path as aiopath
+import contextlib
+
+from aiofiles.os import path as aiopath
+from aiofiles.os import remove
 from pyrogram.filters import command, regex
-from pyrogram.handlers import MessageHandler, CallbackQueryHandler
+from pyrogram.handlers import CallbackQueryHandler, MessageHandler
 
 from bot import (
-    bot,
-    aria2,
-    task_dict,
-    task_dict_lock,
-    OWNER_ID,
-    user_data,
     LOGGER,
+    OWNER_ID,
+    aria2,
+    bot,
     config_dict,
     qbittorrent_client,
     sabnzbd_client,
+    task_dict,
+    task_dict_lock,
+    user_data,
 )
-from bot.helper.ext_utils.bot_utils import bt_selection_buttons, sync_to_async, new_task
-from bot.helper.ext_utils.status_utils import getTaskByGid, MirrorStatus
+from bot.helper.ext_utils.bot_utils import (
+    bt_selection_buttons,
+    new_task,
+    sync_to_async,
+)
+from bot.helper.ext_utils.status_utils import MirrorStatus, getTaskByGid
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import (
+    deleteMessage,
     sendMessage,
     sendStatusMessage,
-    deleteMessage,
 )
 
 
@@ -53,10 +60,8 @@ async def select(_, message):
         await sendMessage(message, msg)
         return
 
-    if (
-        OWNER_ID != user_id
-        and task.listener.userId != user_id
-        and (user_id not in user_data or not user_data[user_id].get("is_sudo"))
+    if user_id not in (OWNER_ID, task.listener.userId) and (
+        user_id not in user_data or not user_data[user_id].get("is_sudo")
     ):
         await sendMessage(message, "This task is not for you!")
         return
@@ -83,7 +88,8 @@ async def select(_, message):
                 await sync_to_async(task.update)
                 id_ = task.hash()
                 await sync_to_async(
-                    qbittorrent_client.torrents_pause, torrent_hashes=id_
+                    qbittorrent_client.torrents_pause,
+                    torrent_hashes=id_,
                 )
             else:
                 await sync_to_async(task.update)
@@ -91,7 +97,7 @@ async def select(_, message):
                     await sync_to_async(aria2.client.force_pause, id_)
                 except Exception as e:
                     LOGGER.error(
-                        f"{e} Error in pause, this mostly happens after abuse aria2"
+                        f"{e} Error in pause, this mostly happens after abuse aria2",
                     )
         task.listener.select = True
     except:
@@ -124,40 +130,39 @@ async def get_confirm(_, query):
             if task.listener.isQbit:
                 tor_info = (
                     await sync_to_async(
-                        qbittorrent_client.torrents_info, torrent_hash=id_
+                        qbittorrent_client.torrents_info,
+                        torrent_hash=id_,
                     )
                 )[0]
                 path = tor_info.content_path.rsplit("/", 1)[0]
                 res = await sync_to_async(
-                    qbittorrent_client.torrents_files, torrent_hash=id_
+                    qbittorrent_client.torrents_files,
+                    torrent_hash=id_,
                 )
                 for f in res:
                     if f.priority == 0:
                         f_paths = [f"{path}/{f.name}", f"{path}/{f.name}.!qB"]
                         for f_path in f_paths:
                             if await aiopath.exists(f_path):
-                                try:
+                                with contextlib.suppress(Exception):
                                     await remove(f_path)
-                                except:
-                                    pass
                 if not task.queued:
                     await sync_to_async(
-                        qbittorrent_client.torrents_resume, torrent_hashes=id_
+                        qbittorrent_client.torrents_resume,
+                        torrent_hashes=id_,
                     )
             else:
                 res = await sync_to_async(aria2.client.get_files, id_)
                 for f in res:
                     if f["selected"] == "false" and await aiopath.exists(f["path"]):
-                        try:
+                        with contextlib.suppress(Exception):
                             await remove(f["path"])
-                        except:
-                            pass
                 if not task.queued:
                     try:
                         await sync_to_async(aria2.client.unpause, id_)
                     except Exception as e:
                         LOGGER.error(
-                            f"{e} Error in resume, this mostly happens after abuse aria2. Try to use select cmd again!"
+                            f"{e} Error in resume, this mostly happens after abuse aria2. Try to use select cmd again!",
                         )
         elif task.listener.isNzb:
             await sabnzbd_client.resume_job(id_)
@@ -173,6 +178,6 @@ bot.add_handler(
         select,
         filters=command(BotCommands.SelectCommand, case_sensitive=True)
         & CustomFilters.authorized,
-    )
+    ),
 )
 bot.add_handler(CallbackQueryHandler(get_confirm, filters=regex("^sel")))

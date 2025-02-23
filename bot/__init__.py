@@ -1,30 +1,38 @@
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from aria2p import API as ariaAPI, Client as ariaClient
+import contextlib
 from asyncio import Lock
 from base64 import b64decode
-from dotenv import load_dotenv, dotenv_values
 from logging import (
-    getLogger,
+    ERROR,
+    INFO,
     FileHandler,
     StreamHandler,
     basicConfig,
-    INFO,
-    ERROR,
+    getLogger,
+)
+from logging import (
     warning as log_warning,
 )
-from os import remove as osremove, path as ospath, environ, getcwd
-from pymongo import MongoClient
-from pyrogram import Client as tgClient, __version__
-from pyrogram.enums import ParseMode
-from qbittorrentapi import Client as qbClient
+from os import environ, getcwd
+from os import path as ospath
+from os import remove as osremove
 from re import sub as resub
 from socket import setdefaulttimeout
-from subprocess import Popen, run as srun, check_output
+from subprocess import Popen, check_output
+from subprocess import run as srun
 from sys import exit
 from time import sleep, time
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from aria2p import API as ariaAPI
+from aria2p import Client as ariaClient
+from dotenv import dotenv_values, load_dotenv
+from pymongo import MongoClient
+from pyrogram import Client as tgClient
+from pyrogram import __version__
+from pyrogram.enums import ParseMode
+from qbittorrentapi import Client as qbClient
 from tzlocal import get_localzone
 from uvloop import install
-
 
 # from faulthandler import enable as faulthandler_enable
 # faulthandler_enable()
@@ -105,7 +113,8 @@ FFMPEG_NAME = environ.get("FFMPEG_NAME", "ffmpeg")
 # ============================ REQUIRED ================================
 if not (
     BOT_TOKEN := environ.get(
-        "BOT_TOKEN", "6499364659:AAHMmUxMWag28I9V_9YJBi8qaZWZ0VstGEk"
+        "BOT_TOKEN",
+        "6499364659:AAHMmUxMWag28I9V_9YJBi8qaZWZ0VstGEk",
     )
 ):
     LOGGER.error("BOT_TOKEN variable is missing! Exiting now")
@@ -118,12 +127,10 @@ if DATABASE_URL := environ.get(
     "mongodb+srv://hello:hello@cluster0.vc2htx0.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
 ):
     if not DATABASE_URL.startswith("mongodb"):
-        try:
+        with contextlib.suppress(Exception):
             DATABASE_URL = b64decode(
-                resub("ini|adalah|pesan|yang|sangat|rahasia", "", DATABASE_URL)
+                resub("ini|adalah|pesan|yang|sangat|rahasia", "", DATABASE_URL),
             ).decode("utf-8")
-        except:
-            pass
     try:
         conn = MongoClient(DATABASE_URL)
         db = conn.mltb
@@ -131,13 +138,17 @@ if DATABASE_URL := environ.get(
         old_config = db.settings.deployConfig.find_one({"_id": bot_id})
         if old_config is None:
             db.settings.deployConfig.replace_one(
-                {"_id": bot_id}, current_config, upsert=True
+                {"_id": bot_id},
+                current_config,
+                upsert=True,
             )
         else:
             del old_config["_id"]
         if old_config and old_config != current_config:
             db.settings.deployConfig.replace_one(
-                {"_id": bot_id}, current_config, upsert=True
+                {"_id": bot_id},
+                current_config,
+                upsert=True,
             )
         elif config_dict := db.settings.config.find_one({"_id": bot_id}):
             del config_dict["_id"]
@@ -152,8 +163,8 @@ if DATABASE_URL := environ.get(
                     with open(file_, "wb+") as f:
                         f.write(value)
                     if file_ == "cfg.zip":
-                        srun(["rm", "-rf", "/JDownloader/cfg"])
-                        srun(["7z", "x", "cfg.zip", "-o/JDownloader"])
+                        srun(["rm", "-rf", "/JDownloader/cfg"], check=False)
+                        srun(["7z", "x", "cfg.zip", "-o/JDownloader"], check=False)
                         osremove("cfg.zip")
         if a2c_options := db.settings.aria2c.find_one({"_id": bot_id}):
             del a2c_options["_id"]
@@ -168,12 +179,10 @@ if DATABASE_URL := environ.get(
         bot_id = BOT_TOKEN.split(":", 1)[0]
         if DATABASE_URL := environ.get("DATABASE_URL", ""):
             if not DATABASE_URL.startswith("mongodb"):
-                try:
+                with contextlib.suppress(Exception):
                     DATABASE_URL = b64decode(
-                        resub("ini|adalah|pesan|rahasia", "", DATABASE_URL)
+                        resub("ini|adalah|pesan|rahasia", "", DATABASE_URL),
                     ).decode("utf-8")
-                except:
-                    pass
     except Exception as e:
         LOGGER.error("Database ERROR: %s", e)
 else:
@@ -250,7 +259,9 @@ INDEX_URL = environ.get("INDEX_URL", "").rstrip("/")
 INCOMPLETE_TASK_NOTIFIER = (
     environ.get("INCOMPLETE_TASK_NOTIFIER", "True").lower() == "true"
 )
-INCOMPLETE_AUTO_RESUME = environ.get("INCOMPLETE_AUTO_RESUME", "True").lower() == "true"
+INCOMPLETE_AUTO_RESUME = (
+    environ.get("INCOMPLETE_AUTO_RESUME", "True").lower() == "true"
+)
 USE_SERVICE_ACCOUNTS = environ.get("USE_SERVICE_ACCOUNTS", "False").lower() == "true"
 CMD_SUFFIX = environ.get("CMD_SUFFIX", "")
 DATABASE_URL = environ.get("DATABASE_URL", "")
@@ -271,7 +282,7 @@ SAVE_SESSION_STRING = environ.get("SAVE_SESSION_STRING", "")
 USERBOT_LEECH = environ.get("USERBOT_LEECH", "False").lower() == "true"
 AUTO_DELETE_MESSAGE_DURATION = int(environ.get("AUTO_DELETE_MESSAGE_DURATION", 30))
 AUTO_DELETE_UPLOAD_MESSAGE_DURATION = int(
-    environ.get("AUTO_DELETE_UPLOAD_MESSAGE_DURATION", 30)
+    environ.get("AUTO_DELETE_UPLOAD_MESSAGE_DURATION", 30),
 )
 STATUS_UPDATE_INTERVAL = int(environ.get("STATUS_UPDATE_INTERVAL", 5))
 YT_DLP_OPTIONS = environ.get("YT_DLP_OPTIONS", "")
@@ -320,7 +331,9 @@ OTHER_LOG = (
 )
 
 LINK_LOG = environ.get("LINK_LOG", "")
-LINK_LOG = int(LINK_LOG) if LINK_LOG.isdigit() or LINK_LOG.startswith("-") else LINK_LOG
+LINK_LOG = (
+    int(LINK_LOG) if LINK_LOG.isdigit() or LINK_LOG.startswith("-") else LINK_LOG
+)
 # ======================================================================
 
 
@@ -425,16 +438,20 @@ images = "https://graph.org/file/79d62e05db6894c34f0df-c54d163cde4785ca28.jpg ht
           https://graph.org/file/bd39056e99c5d8e781883-870eed8cc4f0104788.jpg https://graph.org/file/9da9ad2e1fe22049d4118-ce8e6720aa35c3de67.jpg https://graph.org/file/44353a4dcb7b88cec6434-4701e8b86e5aeec010.jpg"
 ENABLE_IMAGE_MODE = environ.get("ENABLE_IMAGE_MODE", "True").lower() == "true"
 IMAGE_ARIA = environ.get(
-    "IMAGE_ARIA", "https://graph.org/file/b955fe4acb20149ba4868-309fb913aa926b75dd.jpg"
+    "IMAGE_ARIA",
+    "https://graph.org/file/b955fe4acb20149ba4868-309fb913aa926b75dd.jpg",
 )
 IMAGE_AUTH = environ.get(
-    "IMAGE_AUTH", "https://graph.org/file/0cf8c787d792a6f04791b-ac5532767649d372c1.jpg"
+    "IMAGE_AUTH",
+    "https://graph.org/file/0cf8c787d792a6f04791b-ac5532767649d372c1.jpg",
 )
 IMAGE_BOLD = environ.get(
-    "IMAGE_BOLD", "https://graph.org/file/e0c29cf9bbf7dfd5d852e-82b1e7ff72aaf399e6.jpg"
+    "IMAGE_BOLD",
+    "https://graph.org/file/e0c29cf9bbf7dfd5d852e-82b1e7ff72aaf399e6.jpg",
 )
 IMAGE_BYE = environ.get(
-    "IMAGE_BYE", "https://graph.org/file/67b2460f8876fc32db886-c89db46da6662af053.jpg"
+    "IMAGE_BYE",
+    "https://graph.org/file/67b2460f8876fc32db886-c89db46da6662af053.jpg",
 )
 IMAGE_CANCEL = environ.get(
     "IMAGE_CANCEL",
@@ -466,39 +483,48 @@ IMAGE_CONVIEW = environ.get(
     "https://graph.org/file/7ebb7d1b137c22576e586-658e0c588d8314b696.jpg",
 )
 IMAGE_DUMP = environ.get(
-    "IMAGE_DUMP", "https://graph.org/file/fedd4776a5c358b9c1ad2-45cfa75bf17cd052b9.jpg"
+    "IMAGE_DUMP",
+    "https://graph.org/file/fedd4776a5c358b9c1ad2-45cfa75bf17cd052b9.jpg",
 )
 IMAGE_EXTENSION = environ.get(
     "IMAGE_EXTENSION",
     "https://graph.org/file/241538f6ca7c53befafad-695cf5ae06ed1c83d3.jpg",
 )
 IMAGE_GD = environ.get(
-    "IMAGE_GD", "https://graph.org/file/834e49f9b5b31985dc63e-0ddbfe0c0af13b289f.jpg"
+    "IMAGE_GD",
+    "https://graph.org/file/834e49f9b5b31985dc63e-0ddbfe0c0af13b289f.jpg",
 )
 IMAGE_HELP = environ.get(
-    "IMAGE_HELP", "https://graph.org/file/786d876956ffd92933e5a-d7d3374cd21780c4cb.jpg"
+    "IMAGE_HELP",
+    "https://graph.org/file/786d876956ffd92933e5a-d7d3374cd21780c4cb.jpg",
 )
 IMAGE_HTML = environ.get(
-    "IMAGE_HTML", "https://graph.org/file/11dc20f036a5725ebb04d-5b2067f4882df86a2e.jpg"
+    "IMAGE_HTML",
+    "https://graph.org/file/11dc20f036a5725ebb04d-5b2067f4882df86a2e.jpg",
 )
 IMAGE_IMDB = environ.get(
-    "IMAGE_IMDB", "https://graph.org/file/69d0b2a3da7daaca13374-878f19d5458afec3bf.jpg"
+    "IMAGE_IMDB",
+    "https://graph.org/file/69d0b2a3da7daaca13374-878f19d5458afec3bf.jpg",
 )
 IMAGE_INFO = environ.get(
-    "IMAGE_INFO", "https://graph.org/file/5ef00ebe4fff7bf441be0-7c0dd7c0af27b4f553.jpg"
+    "IMAGE_INFO",
+    "https://graph.org/file/5ef00ebe4fff7bf441be0-7c0dd7c0af27b4f553.jpg",
 )
 IMAGE_ITALIC = environ.get(
     "IMAGE_ITALIC",
     "https://graph.org/file/f8184418b1f921a43a7de-a320e7db583217b0ea.jpg",
 )
 IMAGE_JD = environ.get(
-    "IMAGE_JD", "https://graph.org/file/90d9e5281227509960d73-d5b0d7a77fcc82b2b8.jpg"
+    "IMAGE_JD",
+    "https://graph.org/file/90d9e5281227509960d73-d5b0d7a77fcc82b2b8.jpg",
 )
 IMAGE_LOGS = environ.get(
-    "IMAGE_LOGS", "https://graph.org/file/3d3d4ff6da76a7ba9ae7e-d79bc00f3e921a022f.jpg"
+    "IMAGE_LOGS",
+    "https://graph.org/file/3d3d4ff6da76a7ba9ae7e-d79bc00f3e921a022f.jpg",
 )
 IMAGE_MDL = environ.get(
-    "IMAGE_MDL", "https://graph.org/file/bf022a38e6e604314bcc0-b52c3c257d5c95634a.jpg"
+    "IMAGE_MDL",
+    "https://graph.org/file/bf022a38e6e604314bcc0-b52c3c257d5c95634a.jpg",
 )
 IMAGE_MEDINFO = environ.get(
     "IMAGE_MEDINFO",
@@ -509,24 +535,28 @@ IMAGE_METADATA = environ.get(
     "https://graph.org/file/9257f155ec587cc708e03-452d86c7775776f5d4.jpg",
 )
 IMAGE_MONO = environ.get(
-    "IMAGE_MONO", "https://graph.org/file/1136d3236f65922811cf5-305a6d4fc7bbbd73bc.jpg"
+    "IMAGE_MONO",
+    "https://graph.org/file/1136d3236f65922811cf5-305a6d4fc7bbbd73bc.jpg",
 )
 IMAGE_NORMAL = environ.get(
     "IMAGE_NORMAL",
     "https://graph.org/file/d959822219c176e3f8c8e-408da582f04a89f846.jpg",
 )
 IMAGE_OWNER = environ.get(
-    "IMAGE_OWNER", "https://graph.org/file/2748a01faa27b6a6877e1-d6fe36073bd672ab8d.jpg"
+    "IMAGE_OWNER",
+    "https://graph.org/file/2748a01faa27b6a6877e1-d6fe36073bd672ab8d.jpg",
 )
 IMAGE_PAUSE = environ.get(
-    "IMAGE_PAUSE", "https://graph.org/file/5274b0b22d50f70d4ac5c-be94eff5048ac8a959.jpg"
+    "IMAGE_PAUSE",
+    "https://graph.org/file/5274b0b22d50f70d4ac5c-be94eff5048ac8a959.jpg",
 )
 IMAGE_PRENAME = environ.get(
     "IMAGE_PRENAME",
     "https://graph.org/file/36389155d2eab8fbbe8b8-559521f36cfe5b00ea.jpg",
 )
 IMAGE_QBIT = environ.get(
-    "IMAGE_QBIT", "https://graph.org/file/06c06767756761a69ef40-17797558c5cdc21d1a.jpg"
+    "IMAGE_QBIT",
+    "https://graph.org/file/06c06767756761a69ef40-17797558c5cdc21d1a.jpg",
 )
 IMAGE_RCLONE = environ.get(
     "IMAGE_RCLONE",
@@ -537,14 +567,16 @@ IMAGE_REMNAME = environ.get(
     "https://graph.org/file/4d10c8f4248daf4a490aa-c320435d4408f54385.jpg",
 )
 IMAGE_RSS = environ.get(
-    "IMAGE_RSS", "https://graph.org/file/d9b8562c5c130dc4f7a14-794534955e3faa34a5.jpg"
+    "IMAGE_RSS",
+    "https://graph.org/file/d9b8562c5c130dc4f7a14-794534955e3faa34a5.jpg",
 )
 IMAGE_SEARCH = environ.get(
     "IMAGE_SEARCH",
     "https://graph.org/file/d27aa5734d1661de17f39-c639d6df08e87eb95d.jpg",
 )
 IMAGE_STATS = environ.get(
-    "IMAGE_STATS", "https://graph.org/file/fa1e0859b156b522a7a0b-6a200457fa30020594.jpg"
+    "IMAGE_STATS",
+    "https://graph.org/file/fa1e0859b156b522a7a0b-6a200457fa30020594.jpg",
 )
 IMAGE_STATUS = environ.get(
     "IMAGE_STATUS",
@@ -555,10 +587,12 @@ IMAGE_SUFNAME = environ.get(
     "https://graph.org/file/9934d97e31a71332b1643-0f222759a97146e877.jpg",
 )
 IMAGE_TMDB = environ.get(
-    "IMAGE_TMDB", "https://graph.org/file/a7cabcbcf13eba509dbaa-87b76e87a199561b28.jpg"
+    "IMAGE_TMDB",
+    "https://graph.org/file/a7cabcbcf13eba509dbaa-87b76e87a199561b28.jpg",
 )
 IMAGE_TXT = environ.get(
-    "IMAGE_TXT", "https://graph.org/file/63f9023443fe2102274d5-811a7178da9a5f63c6.jpg"
+    "IMAGE_TXT",
+    "https://graph.org/file/63f9023443fe2102274d5-811a7178da9a5f63c6.jpg",
 )
 IMAGE_UNAUTH = environ.get("IMAGE_UNAUTH", "https://envs.sh/Ah0.jpg")
 IMAGE_UNKNOW = environ.get("IMAGE_UNKNOW", "https://envs.sh/AhI.jpg")
@@ -642,7 +676,9 @@ WEB_PINCODE = environ.get("WEB_PINCODE", "False").lower() == "true"
 
 # =============================== RSS ==================================
 RSS_CHAT = environ.get("RSS_CHAT", "")
-RSS_CHAT = int(RSS_CHAT) if RSS_CHAT.isdigit() or RSS_CHAT.startswith("-") else RSS_CHAT
+RSS_CHAT = (
+    int(RSS_CHAT) if RSS_CHAT.isdigit() or RSS_CHAT.startswith("-") else RSS_CHAT
+)
 
 RSS_DELAY = environ.get("RSS_DELAY", "")
 RSS_DELAY = int(RSS_DELAY) if RSS_DELAY else 900
@@ -860,8 +896,6 @@ config_dict = {
     "BUTTON_FOUR_URL": BUTTON_FOUR_URL,
     "BUTTON_SIX_NAME": BUTTON_SIX_NAME,
     "BUTTON_SIX_URL": BUTTON_SIX_URL,
-    # QBITTORRENT
-    "BASE_URL": BASE_URL,
     "WEB_PINCODE": WEB_PINCODE,
     # RSS
     "RSS_CHAT": RSS_CHAT,
@@ -907,14 +941,15 @@ if not config_dict["ARGO_TOKEN"]:
 
 PORT = environ.get("PORT")
 Popen(
-    f"gunicorn web.wserver:app --bind 0.0.0.0:{PORT} --worker-class gevent", shell=True
+    f"gunicorn web.wserver:app --bind 0.0.0.0:{PORT} --worker-class gevent",
+    shell=True,
 )
 
 srun([QBIT_NAME, "-d", f"--profile={getcwd()}"], check=True)
 if not ospath.exists(".netrc"):
     with open(".netrc", "w"):
         pass
-srun("chmod 600 .netrc && cp .netrc /root/.netrc", shell=True)
+srun("chmod 600 .netrc && cp .netrc /root/.netrc", shell=True, check=False)
 trackers = (
     check_output(
         "curl -Ns https://raw.githubusercontent.com/XIU2/TrackersListCollection/master/all.txt https://ngosang.github.io/trackerslist/trackers_all_http.txt https://newtrackon.com/api/all https://raw.githubusercontent.com/hezhijie0327/Trackerslist/main/trackerslist_tracker.txt | awk '$0' | tr '\n\n' ','",
@@ -936,6 +971,7 @@ if ospath.exists("accounts.zip"):
     srun(
         "7z x -o. -aoa accounts.zip accounts/*.json && chmod -R 777 accounts",
         shell=True,
+        check=False,
     )
     osremove("accounts.zip")
 if not ospath.exists("accounts"):
@@ -986,7 +1022,11 @@ kwargs = {"workers": 1000, "parse_mode": ParseMode.HTML}
 if int(__version__.replace(".", "")[:3]) > 221:
     kwargs.update({"max_concurrent_transmissions": 1000})
 bot: tgClient = tgClient(
-    "bot", TELEGRAM_API, TELEGRAM_HASH, bot_token=BOT_TOKEN, **kwargs
+    "bot",
+    TELEGRAM_API,
+    TELEGRAM_HASH,
+    bot_token=BOT_TOKEN,
+    **kwargs,
 ).start()
 
 bot_loop = bot.loop
